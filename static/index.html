@@ -377,6 +377,10 @@
   <!-- PAGE 3 · ANALYSIS -->
   <section id="pageAnalysis" class="page hidden">
    <div class="analysis-stack">
+    <div class="panel pipeline-panel hidden" id="pipelinePanel">
+      <div class="p-h"><span class="t">Analysis Pipeline<span class="info" tabindex="0" role="button" aria-label="What is the analysis pipeline?">i<span class="tipbox">The deterministic stages behind every case: <b>Planner</b> (geocode + search model) → <b>Retriever</b> (4 public sources) → <b>Verifier</b> (corroborate, de-dup, score) → <b>Reporter</b> (zones, plan, entity graph). Every number is computed, not guessed — no autonomous LLM agents.</span></span></span><span class="c">deterministic stages</span></div>
+      <div class="pipeline" id="pipeline"></div>
+    </div>
     <div class="fusion-alert hidden" id="fusionAlert">
       <div class="fu-icon">⊕</div>
       <div>
@@ -706,6 +710,36 @@ function drawRings(rings, sm){
   rings.forEach((r,i)=>L.circle(sm.center,{radius:r.km*1000,color:cols[i],weight:1.2,opacity:.55,
     fill:i===0,fillColor:cols[0],fillOpacity:i===0?.05:0,dashArray:i?"4 9":"none"}).addTo(ringLayer));
 }
+// ---- analysis pipeline (frame the deterministic stages as a live workflow) ----
+function renderPipeline(c){
+  const panel=$("pipelinePanel"); if(!panel) return;
+  panel.classList.remove("hidden");
+  const intel=c.intelligence||{}, cmd=intel.commander||{};
+  const geocoded=!!c.geocoded || !!c.search_model;
+  const sources=c.sources_searched||0, leads=(c.leads||[]).length;
+  const corr=(intel.corroboration||[]).length, filtered=c.filtered||0;
+  const zones=(cmd.priority_zones||[]).length || ((c.search_plan||{}).teams||[]).length;
+  const entities=(c.graph&&c.graph.stats)?c.graph.stats.shown_nodes:0;
+  const stages=[
+    {name:"Planner",   sub:"geocode · search model",     done:geocoded,
+     metric: geocoded?"location resolved":"resolving location…"},
+    {name:"Retriever", sub:"4 public sources",            done:!!c.done,
+     metric:`${sources.toLocaleString()} sources · ${leads} leads`},
+    {name:"Verifier",  sub:"corroborate · de-dup · score", done:!!c.intelligence,
+     metric:`${corr} corroboration${corr===1?"":"s"} · ${filtered} noise cut`},
+    {name:"Reporter",  sub:"zones · plan · entity graph",  done:!!(c.intelligence&&c.graph),
+     metric: c.intelligence?`${zones} zone${zones===1?"":"s"} · ${entities} entities`:"pending"},
+  ];
+  const activeIdx=stages.findIndex(s=>!s.done);
+  $("pipeline").innerHTML=stages.map((s,i)=>{
+    const state=s.done?"done":(i===activeIdx?"active":"pending");
+    const icon=s.done?"✓":(state==="active"?"▸":(i+1));
+    const link=i>0?`<div class="pl-link ${stages[i-1].done?"on":""}"></div>`:"";
+    return `${link}<div class="pl-stage ${state}"><div class="pl-ic">${icon}</div>`+
+      `<div class="pl-body"><div class="pl-name">${s.name}</div><div class="pl-sub">${s.sub}</div>`+
+      `<div class="pl-metric">${escHtml(s.metric)}</div></div></div>`;
+  }).join("");
+}
 // ---- entity knowledge graph (deterministic network analytics) ----
 function kgNodeR(n){ const base={subject:17,place:8,source:6,clothing:5}[n.type]||6; return base+(n.centrality||0)*11; }
 function kgLayout(g,W,H){
@@ -895,7 +929,7 @@ function resetOp(){
   $("investPanel").classList.add("hidden"); if(areaLayer) areaLayer.clearLayers();
   if(cctvLayer) cctvLayer.clearLayers(); if(ringLayer) ringLayer.clearLayers();
   $("srPanel").classList.add("hidden"); $("cctvList").innerHTML="";
-  $("graphPanel").classList.add("hidden");
+  $("graphPanel").classList.add("hidden"); $("pipelinePanel").classList.add("hidden");
   const cb=$("cctvBtn"); if(cb){ cb.disabled=false; cb.textContent="🎥 Find CCTV / footage sources nearby"; }
   if(history.replaceState) history.replaceState({}, "", location.pathname);
 }
@@ -1090,6 +1124,7 @@ async function refresh(){
   if(c.intelligence){ renderIntelligence(c.intelligence); renderInvestigation(c.intelligence); }
   renderSearchModel(c);
   renderGraph(c.graph);
+  renderPipeline(c);
   if(c.done) loadAuthorities();
   renderProfile(c.child);
   renderFeed(c);
@@ -1318,6 +1353,28 @@ async function refresh(){
   .cctv-d{ font-family:var(--mono); font-size:10px; color:var(--faint); flex:none; }
   .cctvm{ width:11px; height:11px; border-radius:3px; background:rgba(70,224,160,.85); border:1px solid #0a0d16;
     box-shadow:0 0 7px rgba(70,224,160,.7); }
+
+  /* ---- Analysis pipeline (deterministic stages) ---- */
+  .pipeline{ display:flex; align-items:stretch; gap:0; padding:16px; }
+  .pl-stage{ flex:1; display:flex; gap:11px; align-items:flex-start; padding:12px 13px; border-radius:11px;
+    background:var(--panel-2); border:1px solid var(--line); min-width:0; transition:.2s; }
+  .pl-stage.done{ border-color:rgba(70,224,160,.3); }
+  .pl-stage.active{ border-color:rgba(255,184,77,.42); background:rgba(255,184,77,.05); }
+  .pl-ic{ width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:12px; font-weight:600; }
+  .pl-stage.pending .pl-ic{ background:var(--panel); border:1px solid var(--line-2); color:var(--faint); }
+  .pl-stage.done .pl-ic{ background:var(--green); color:#07140d; }
+  .pl-stage.active .pl-ic{ background:var(--amber); color:#150d00; animation:spulse 1.4s infinite; }
+  .pl-body{ min-width:0; }
+  .pl-name{ font-family:var(--display); font-weight:600; font-size:13.5px; }
+  .pl-sub{ font-size:9.5px; color:var(--faint); text-transform:uppercase; letter-spacing:.7px; margin:2px 0 6px; }
+  .pl-metric{ font-family:var(--mono); font-size:11px; color:var(--muted); line-height:1.4; }
+  .pl-stage.done .pl-metric{ color:#bfeede; }
+  .pl-stage.active .pl-metric{ color:var(--amber); }
+  .pl-link{ flex:none; align-self:center; width:24px; height:2px; background:var(--line); transition:.3s; }
+  .pl-link.on{ background:var(--green); }
+  @media (max-width:860px){ .pipeline{ flex-direction:column; }
+    .pl-link{ width:2px; height:16px; margin-left:25px; } }
 
   /* ---- Entity knowledge graph ---- */
   .kg-central{ margin:0 16px; padding:11px 14px; border-radius:10px; font-size:12.5px; color:#ffe2b0;
