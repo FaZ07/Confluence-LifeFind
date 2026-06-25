@@ -27,6 +27,7 @@ from pydantic import BaseModel, field_validator
 import authorities
 import export
 import geo
+import graph
 import intel
 import narrate
 import places
@@ -199,6 +200,10 @@ async def run_search(case_id: str, offline: bool | None = None) -> None:
                 case["intelligence"] = intel.analyze_case(case["leads"], case["child"], generics)
             except Exception:  # noqa: BLE001
                 case["intelligence"] = intel.analyze_case([], case["child"])
+        try:
+            case["graph"] = graph.build_graph(case)   # deterministic entity network
+        except Exception:  # noqa: BLE001
+            case["graph"] = None
         store.save(case)
         log.info("case %s done: %d leads, %.1fs%s", case_id, len(case["leads"]),
                  case["elapsed_s"], " (with errors)" if case.get("error") else "")

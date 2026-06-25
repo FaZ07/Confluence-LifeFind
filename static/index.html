@@ -421,6 +421,20 @@
         </div>
       </div>
     </div>
+    <div class="panel kg hidden" id="graphPanel">
+      <div class="p-h"><span class="t">Entity Network<span class="info" tabindex="0" role="button" aria-label="What is the entity network?">i<span class="tipbox">A network of <b>who reported what, where</b>. Sources report locations; locations carry the clothing corroborated there; the subject anchors it. Bigger, brighter nodes are more central — the standout is the location the <b>most independent sources</b> agree on. Hover any node to trace its links.</span></span></span><span class="c">deterministic · network centrality</span></div>
+      <div class="kg-central empty" id="graphCentral"></div>
+      <div class="kg-wrap"><div id="graphSvg" class="kg-svg"></div></div>
+      <div class="kg-foot">
+        <div class="kg-legend">
+          <span><i class="kg-dot d-subject"></i>subject</span>
+          <span><i class="kg-dot d-place"></i>location</span>
+          <span><i class="kg-dot d-source"></i>source</span>
+          <span><i class="kg-dot d-clothing"></i>clothing</span>
+        </div>
+        <div class="kg-info" id="graphInfo">Hover a node to trace its connections.</div>
+      </div>
+    </div>
     <div class="panel sr hidden" id="srPanel">
       <div class="p-h"><span class="t">Statistical search radius<span class="info" tabindex="0" role="button" aria-label="What is the statistical search radius?">i<span class="tipbox">Empirical distance rings SAR teams use: how far <b>comparable</b> subjects have historically been found from the last-seen point (ISRID data). Representative — <b>calibrate to your region</b> before operational use, not a prediction of this person.</span></span></span><span class="c">lost-person-behavior model</span></div>
       <div class="sr-body" id="srBody"></div>
@@ -692,6 +706,56 @@ function drawRings(rings, sm){
   rings.forEach((r,i)=>L.circle(sm.center,{radius:r.km*1000,color:cols[i],weight:1.2,opacity:.55,
     fill:i===0,fillColor:cols[0],fillOpacity:i===0?.05:0,dashArray:i?"4 9":"none"}).addTo(ringLayer));
 }
+// ---- entity knowledge graph (deterministic network analytics) ----
+function kgNodeR(n){ const base={subject:17,place:8,source:6,clothing:5}[n.type]||6; return base+(n.centrality||0)*11; }
+function kgLayout(g,W,H){
+  const cx=W/2, cy=H/2, R=Math.min(W,H), pos={subject:{x:cx,y:cy,a:0}};
+  const by=t=>g.nodes.filter(n=>n.type===t);
+  const ring=(arr,rad,sortFn)=>{ const a=sortFn?[...arr].sort(sortFn):arr;
+    a.forEach((n,i)=>{ const ang=-Math.PI/2 + i*2*Math.PI/Math.max(1,a.length);
+      pos[n.id]={x:cx+rad*Math.cos(ang), y:cy+rad*Math.sin(ang), a:ang}; }); };
+  ring(by('clothing'), R*0.15);
+  ring(by('place'), R*0.27, (a,b)=>b.centrality-a.centrality);
+  const ang={}; by('source').forEach(n=>{ let bw=-1,t=null;
+    g.edges.forEach(e=>{ if(e.source===n.id && pos[e.target] && e.weight>bw){ bw=e.weight; t=e.target; } });
+    ang[n.id]= t&&pos[t]? pos[t].a : 0; });
+  ring(by('source'), R*0.43, (a,b)=>(ang[a.id]||0)-(ang[b.id]||0));
+  return pos;
+}
+function kgNodeInfo(n){
+  if(n.type==='place')    return `<b>${escHtml(n.label)}</b> — ${n.sources} independent source${n.sources>1?'s':''} · ${n.leads} lead${n.leads>1?'s':''} · centrality ${n.centrality}`;
+  if(n.type==='source')   return `<b>${escHtml(n.label)}</b> (${escHtml(n.source_type||'web')}) — reports ${n.places} location${n.places>1?'s':''}`;
+  if(n.type==='clothing') return `<b>${escHtml(n.label)}</b> — clothing descriptor corroborated across locations`;
+  return `<b>${escHtml(n.label)}</b> — the missing subject (anchor)`;
+}
+function renderGraph(g){
+  const panel=$("graphPanel"); if(!panel) return;
+  if(!g||!g.nodes||g.nodes.length<3){ panel.classList.add("hidden"); return; }
+  panel.classList.remove("hidden");
+  const W=920,H=580, pos=kgLayout(g,W,H), byId={}; g.nodes.forEach(n=>byId[n.id]=n);
+  let e=""; g.edges.forEach(ed=>{ const a=pos[ed.source], b=pos[ed.target]; if(!a||!b) return;
+    e+=`<line class="ge" data-s="${escHtml(ed.source)}" data-t="${escHtml(ed.target)}" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke-width="${Math.max(.6,Math.min(3,ed.weight/45)).toFixed(2)}"/>`; });
+  let nd=""; g.nodes.forEach(n=>{ const p=pos[n.id]; if(!p) return; const r=kgNodeR(n);
+    const central=g.central&&g.central.id===n.id, lbl=n.label||"", disp=lbl.length>15?lbl.slice(0,14)+"…":lbl;
+    nd+=`<g class="gn ${central?'central':''}" data-id="${escHtml(n.id)}" tabindex="0">${central?`<circle class="glow" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+8).toFixed(1)}"/>`:""}<circle class="dot type-${n.type}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r.toFixed(1)}"/><text class="glabel" x="${p.x.toFixed(1)}" y="${(p.y+r+13).toFixed(1)}">${escHtml(disp)}</text></g>`; });
+  $("graphSvg").innerHTML=`<svg viewBox="0 0 ${W} ${H}" id="kgSvg" role="img" aria-label="Entity relationship network"><g class="kg-edges">${e}</g><g class="kg-nodes">${nd}</g></svg>`;
+  const gc=$("graphCentral");
+  if(g.central){ gc.classList.remove("empty"); gc.innerHTML=`◈ Most corroborated: <b>${escHtml(g.central.label)}</b> — ${g.central.sources} independent source${g.central.sources>1?'s':''} converge here`; }
+  else gc.classList.add("empty");
+  $("graphInfo").textContent="Hover a node to trace its connections.";
+  const adj={}; g.edges.forEach(ed=>{ (adj[ed.source]=adj[ed.source]||new Set()).add(ed.target); (adj[ed.target]=adj[ed.target]||new Set()).add(ed.source); });
+  const svg=$("kgSvg");
+  svg.querySelectorAll(".gn").forEach(node=>{
+    const id=node.dataset.id;
+    const enter=()=>{ svg.classList.add("focus"); const keep=new Set([id,...(adj[id]||[])]);
+      svg.querySelectorAll(".gn").forEach(o=>o.classList.toggle("dim",!keep.has(o.dataset.id)));
+      svg.querySelectorAll(".ge").forEach(l=>{ const on=l.dataset.s===id||l.dataset.t===id; l.classList.toggle("hot",on); l.classList.toggle("dim",!on); });
+      const nn=byId[id]; if(nn) $("graphInfo").innerHTML=kgNodeInfo(nn); };
+    const leave=()=>{ svg.classList.remove("focus"); svg.querySelectorAll(".gn,.ge").forEach(o=>o.classList.remove("dim","hot")); $("graphInfo").textContent="Hover a node to trace its connections."; };
+    node.addEventListener("mouseenter",enter); node.addEventListener("mouseleave",leave);
+    node.addEventListener("focus",enter); node.addEventListener("blur",leave);
+  });
+}
 // ---- CCTV / footage-source discovery (OpenStreetMap; not face recognition) ----
 function cctvIcon(){ return L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],html:`<div class="cctvm"></div>`}); }
 async function loadCCTV(){
@@ -831,6 +895,7 @@ function resetOp(){
   $("investPanel").classList.add("hidden"); if(areaLayer) areaLayer.clearLayers();
   if(cctvLayer) cctvLayer.clearLayers(); if(ringLayer) ringLayer.clearLayers();
   $("srPanel").classList.add("hidden"); $("cctvList").innerHTML="";
+  $("graphPanel").classList.add("hidden");
   const cb=$("cctvBtn"); if(cb){ cb.disabled=false; cb.textContent="🎥 Find CCTV / footage sources nearby"; }
   if(history.replaceState) history.replaceState({}, "", location.pathname);
 }
@@ -1024,6 +1089,7 @@ async function refresh(){
 
   if(c.intelligence){ renderIntelligence(c.intelligence); renderInvestigation(c.intelligence); }
   renderSearchModel(c);
+  renderGraph(c.graph);
   if(c.done) loadAuthorities();
   renderProfile(c.child);
   renderFeed(c);
@@ -1252,6 +1318,35 @@ async function refresh(){
   .cctv-d{ font-family:var(--mono); font-size:10px; color:var(--faint); flex:none; }
   .cctvm{ width:11px; height:11px; border-radius:3px; background:rgba(70,224,160,.85); border:1px solid #0a0d16;
     box-shadow:0 0 7px rgba(70,224,160,.7); }
+
+  /* ---- Entity knowledge graph ---- */
+  .kg-central{ margin:0 16px; padding:11px 14px; border-radius:10px; font-size:12.5px; color:#ffe2b0;
+    background:rgba(255,184,77,.06); border:1px solid rgba(255,184,77,.22); }
+  .kg-central b{ color:var(--amber); }
+  .kg-central.empty{ display:none; }
+  .kg-wrap{ padding:6px 8px 2px; }
+  .kg-svg svg{ width:100%; height:auto; display:block; }
+  .kg .ge{ stroke:var(--line-2); transition:stroke-opacity .15s, stroke .15s; }
+  .kg .ge.hot{ stroke:var(--amber); stroke-opacity:.95; }
+  .kg .ge.dim{ stroke-opacity:.05; }
+  .kg .gn{ cursor:pointer; outline:none; }
+  .kg .gn .dot{ stroke:#0a0d16; stroke-width:1.5; transition:.15s; }
+  .kg .dot.type-subject{ fill:#fff; }
+  .kg .dot.type-place{ fill:var(--amber); }
+  .kg .dot.type-source{ fill:var(--cyan); }
+  .kg .dot.type-clothing{ fill:var(--green); }
+  .kg .gn.central .dot{ stroke:var(--amber); stroke-width:2.5; }
+  .kg .gn .glow{ fill:var(--amber); opacity:.16; }
+  .kg .gn .glabel{ fill:var(--muted); font-family:var(--mono); font-size:11px; text-anchor:middle; pointer-events:none; transition:.15s; }
+  .kg .gn:hover .glabel, .kg .gn:focus .glabel{ fill:var(--ink); }
+  .kg .gn:focus .dot{ stroke:var(--cyan); stroke-width:2.5; }
+  .kg svg.focus .gn.dim{ opacity:.2; }
+  .kg-foot{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:6px 16px 16px; }
+  .kg-legend{ display:flex; gap:14px; font-size:11px; color:var(--muted); flex-wrap:wrap; }
+  .kg-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:middle; }
+  .kg-dot.d-subject{ background:#fff; } .kg-dot.d-place{ background:var(--amber); }
+  .kg-dot.d-source{ background:var(--cyan); } .kg-dot.d-clothing{ background:var(--green); }
+  .kg-info{ font-size:11.5px; color:var(--faint); font-family:var(--mono); min-width:0; }
 
   /* ---- Statistical search radius ---- */
   .sr{ margin-top:14px; }

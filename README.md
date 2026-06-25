@@ -23,7 +23,7 @@ Groq LLM ripped out, then hardened into something that actually ships.
 | Persistence | in-memory only | SQLite — cases survive restarts, **shareable by link** |
 | Handoff | — | official channels + CSV / printable case report |
 | API keys | `WIRE_API_KEY` + `GROQ_API_KEY` | **none** |
-| Hardening | — | retries · rate-limit · validation · logging · 81 tests |
+| Hardening | — | retries · rate-limit · validation · logging · 90 tests |
 
 ---
 
@@ -40,7 +40,7 @@ No `.env`, no signup, nothing to configure.
 
 ```bash
 LIFELINE_OFFLINE=1 python -m uvicorn app:app   # force the offline demo set (CI / no-wifi stage)
-pytest -q                                        # 81 tests over the whole engine
+pytest -q                                        # 90 tests over the whole engine
 ```
 
 ---
@@ -111,6 +111,16 @@ Turns isolated clues into evidence — all deterministic, no ML:
 
 This is what takes it from a search *aggregator* to an *investigation-support* tool.
 
+## Entity knowledge graph (`graph.py`)
+
+The leads, drawn as a network: **sources** report **locations**, locations carry the
+**clothing** corroborated there, and the **subject** anchors it. Node prominence is
+normalized weighted-degree **network centrality**, and the standout — highlighted with a
+glow — is the location the most *independent* sources converge on (the same hotspot the
+fusion layer finds, now legible at a glance). Hover any node to trace its connections.
+Fully deterministic: every node, edge and centrality value is computed straight from the
+leads, so the picture is identical every run.
+
 ## Photo color analysis (`vision.py`)
 
 Upload the missing person's photo → LifeFind extracts the **dominant clothing
@@ -168,6 +178,7 @@ hard-fails). All config is env-driven (`settings.py`).
 | `intel.py` | Deterministic fusion, zones, timeline, chat, plan |
 | `narrate.py` | Optional LLM narration — off without a key; never alters decisions |
 | `analysis.py` | Corroboration, movement, clustering, search area, contradictions |
+| `graph.py` | Entity knowledge graph — sources/places/clothing + network centrality |
 | `vision.py` | Dominant clothing-color extraction from a photo (colors only) |
 | `searchmodel.py` | Time-aware statistical search-radius rings (lost-person-behavior) |
 | `places.py` | CCTV / footage-source discovery (OpenStreetMap) |
@@ -179,7 +190,7 @@ hard-fails). All config is env-driven (`settings.py`).
 | `settings.py` | Env-driven configuration |
 | `static/index.html` | 4-page command center UI — no build step |
 | `static/family.html` | Calm, read-only family view |
-| `tests/` | 81 pytest cases (unit + API) |
+| `tests/` | 90 pytest cases (unit + API) |
 
 ### Demo vs Live data — a per-search toggle
 
