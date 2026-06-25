@@ -1,0 +1,64 @@
+"""
+LifeFind — central configuration. Everything is env-driven with safe defaults,
+so the app runs with zero configuration but can be tuned/hardened in production.
+"""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+APP_NAME = "LifeFind"
+APP_VERSION = "2.0.0"
+_HERE = Path(__file__).parent
+
+
+def _b(name: str, default: bool) -> bool:
+    return os.getenv(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _i(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _f(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+# --- modes -------------------------------------------------------------
+OFFLINE = _b("LIFELINE_OFFLINE", False)            # force bundled offline data
+LOG_LEVEL = os.getenv("LIFELINE_LOG_LEVEL", "INFO").upper()
+
+# --- outbound HTTP (hardening) -----------------------------------------
+REQUEST_TIMEOUT = _f("LIFELINE_HTTP_TIMEOUT", 15.0)
+HTTP_RETRIES = _i("LIFELINE_HTTP_RETRIES", 2)       # extra attempts on transient errors
+HTTP_BACKOFF = _f("LIFELINE_HTTP_BACKOFF", 0.6)     # seconds, exponential
+MAX_LEADS_PER_SOURCE = _i("LIFELINE_MAX_LEADS_PER_SOURCE", 8)
+
+CONTACT_EMAIL = os.getenv("LIFELINE_CONTACT", "mohamedfazil1812700@gmail.com")
+USER_AGENT = f"{APP_NAME}/{APP_VERSION} (+https://github.com/FaZ07/LifeFind; {CONTACT_EMAIL})"
+# Reddit 403s simple bot UAs; a real desktop-browser string gets the public JSON.
+BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+# --- geocoding (global) ------------------------------------------------
+GEOCODE_ENABLED = _b("LIFELINE_GEOCODE", True) and not OFFLINE
+NOMINATIM_BASE = os.getenv("LIFELINE_NOMINATIM", "https://nominatim.openstreetmap.org/search")
+GEOCODE_MIN_INTERVAL = _f("LIFELINE_GEOCODE_INTERVAL", 1.1)   # OSM policy: <= 1 req/sec
+GEOCODE_MAX_LOOKUPS = _i("LIFELINE_GEOCODE_MAX", 12)          # bound live lookups per case
+
+# --- persistence -------------------------------------------------------
+# Vercel/serverless filesystems are read-only except /tmp; point LIFELINE_DB there.
+DB_PATH = os.getenv("LIFELINE_DB", str(_HERE / "lifefind.db"))
+PERSIST = _b("LIFELINE_PERSIST", True)
+CASE_TTL_DAYS = _i("LIFELINE_CASE_TTL_DAYS", 30)
+
+# --- API hardening -----------------------------------------------------
+RATE_LIMIT_PER_MIN = _i("LIFELINE_RATE_LIMIT_PER_MIN", 20)    # /api/search per client per minute
+MAX_FIELD_LEN = _i("LIFELINE_MAX_FIELD_LEN", 200)
+ALLOW_ORIGINS = [o for o in os.getenv("LIFELINE_CORS", "*").split(",") if o]

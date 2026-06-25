@@ -268,6 +268,12 @@
       <aside class="panel cc-left">
         <div class="p-h"><span class="t">Subject Profile</span></div>
         <div class="prof" id="profile"></div>
+        <div class="ops-actions">
+          <button class="oa-btn" id="shareBtn" onclick="shareCase()">⤴ Share live case</button>
+          <a class="oa-btn" id="csvLink" href="#" download>⬇ Leads CSV</a>
+          <a class="oa-btn" id="dossierLink" href="#" target="_blank" rel="noopener">🖨 Dossier → PDF</a>
+        </div>
+        <div class="authorities" id="authorities"></div>
       </aside>
 
       <!-- CENTER -->
@@ -382,7 +388,8 @@ function selectCat(key){ activeCat=key; const c=catMeta(key);
 $("launch").onclick=async()=>{
   const child={category:activeCat}; FIELDS.forEach(f=>child[f]=f==="last_seen_time"?fromDateTimePickerValue($(f).value):$(f).value);
   const {case_id}=await (await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(child)})).json();
-  caseId=case_id; $("intake").classList.add("hidden"); $("cc").classList.remove("hidden");
+  caseId=case_id; _authLoaded=false; setExportLinks();
+  $("intake").classList.add("hidden"); $("cc").classList.remove("hidden");
   $("sysDot").classList.add("scan"); $("sysState").textContent="Scanning";
   dispCount=0; initMap(); setTimeout(()=>map&&map.invalidateSize(),60);
   poll=setInterval(refresh,600); refresh();
@@ -526,6 +533,8 @@ function resetOp(){
   $("reco").classList.remove("hidden"); $("reco").innerHTML=""; window._fusionByLead={}; window._relevance={};
   $("chatPanel").classList.add("hidden"); $("planModal").classList.add("hidden");
   $("chatMsgs").innerHTML='<div class="chat-msg ai"><div class="chat-bubble">Commander online. Ask me why a zone was prioritized, what teams should do, or what the evidence shows.</div></div>';
+  _authLoaded=false; $("authorities").innerHTML="";
+  if(history.replaceState) history.replaceState({}, "", location.pathname);
 }
 
 function renderIntelligence(intel){
@@ -637,8 +646,35 @@ function renderPlan(p){
   $("planBrief").textContent=p.commander_briefing||"";
 }
 
+// ---- shareable case + export + official channels ----
+let _authLoaded=false;
+function setExportLinks(){ if(!caseId) return;
+  const cs=$("csvLink"), ds=$("dossierLink");
+  if(cs) cs.href=`/api/case/${caseId}/export.csv`;
+  if(ds) ds.href=`/api/case/${caseId}/dossier`;
+}
+function shareCase(){ if(!caseId) return; const url=`${location.origin}/?case=${caseId}`;
+  const flash=()=>{ const b=$("shareBtn"); if(b){ const o=b.textContent; b.textContent="✓ Link copied"; setTimeout(()=>b.textContent=o,1600); } };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(flash,()=>prompt("Copy this link:",url));
+  else prompt("Copy this link:",url);
+}
+async function loadAuthorities(){ if(_authLoaded||!caseId) return; _authLoaded=true;
+  try{ const a=await (await fetch(`/api/case/${caseId}/authorities`)).json();
+    $("authorities").innerHTML=`<div class="auth-h">▣ Official channels · ${escHtml(a.country)}</div>`+
+      (a.channels||[]).map(c=>`<div class="auth-row"><div class="auth-n">${escHtml(c.name)}</div><div class="auth-s">${escHtml(c.scope)}</div><div class="auth-meta">${c.phone?`<span class="auth-p">☎ ${escHtml(c.phone)}</span>`:""}${c.url?`<a href="${escHtml(c.url)}" target="_blank" rel="noopener">open ↗</a>`:""}</div></div>`).join("")
+      +`<div class="auth-note">${escHtml(a.note||"")}</div>`;
+  }catch(e){ _authLoaded=false; }
+}
+function openCase(id){ caseId=id; $("intake").classList.add("hidden"); $("cc").classList.remove("hidden");
+  $("sysDot").classList.add("scan"); $("sysState").textContent="Loading"; dispCount=0; _authLoaded=false;
+  setExportLinks(); initMap(); setTimeout(()=>map&&map.invalidateSize(),60);
+  poll=setInterval(refresh,800); refresh();
+}
+
 async function refresh(){
-  const c=await (await fetch(`/api/case/${caseId}`)).json();
+  const resp=await fetch(`/api/case/${caseId}`);
+  if(!resp.ok){ clearInterval(poll); $("sysDot").classList.remove("scan"); $("sysState").textContent="Not found"; $("mapStat").textContent="case not found or expired"; return; }
+  const c=await resp.json();
   // No garbage anywhere: once AI relevance is in, drop anything it scored < 4 — feed, map, zones AND counts.
   const rel=(c.intelligence&&c.intelligence.relevance)||{};
   if(Object.keys(rel).length>0) c.leads=c.leads.filter(l=>(rel[l.id]??10)>=4);
@@ -653,6 +689,7 @@ async function refresh(){
   else $("mapStat").textContent="aggregating sources…";
 
   if(c.intelligence) renderIntelligence(c.intelligence);
+  if(c.done) loadAuthorities();
   renderProfile(c.child);
   renderFeed(c);
   updateMap(c.leads,c.child);
@@ -669,6 +706,9 @@ async function refresh(){
     }
   }
 }
+
+// ---- open a shared case directly from a link (?case=ID) ----
+(()=>{ const sid=new URLSearchParams(location.search).get('case'); if(sid) openCase(sid); })();
 </script>
 <style>
   .mk{ position:relative; width:16px; height:16px; }
@@ -755,6 +795,27 @@ async function refresh(){
     font-size:12px; color:#c8d4ee; line-height:1.5; }
   .ai-action{ margin-top:8px; font-family:var(--mono); font-size:10.5px; color:var(--amber);
     padding:8px 10px; border-radius:7px; background:rgba(255,184,77,.06); border:1px solid rgba(255,184,77,.15); }
+
+  /* ---- Ops actions (share / export) + Official channels ---- */
+  .ops-actions{ display:flex; flex-direction:column; gap:7px; padding:4px 16px 14px; }
+  .oa-btn{ display:block; text-align:center; text-decoration:none; font-family:var(--mono);
+    font-size:10.5px; letter-spacing:.8px; padding:9px 10px; border-radius:8px; cursor:pointer;
+    color:var(--ink); background:var(--panel-2); border:1px solid var(--line-2); transition:.15s; }
+  .oa-btn:hover{ border-color:var(--amber); color:var(--amber); }
+  .authorities{ padding:0 16px 18px; }
+  .authorities:empty{ display:none; }
+  .auth-h{ font-family:var(--mono); font-size:10px; letter-spacing:1.4px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:9px; padding-top:13px; border-top:1px solid var(--line); }
+  .auth-row{ padding:9px 0; border-top:1px solid var(--line); }
+  .auth-row:first-of-type{ border-top:none; }
+  .auth-n{ font-size:12.5px; font-weight:600; }
+  .auth-s{ font-size:11px; color:var(--muted); margin:1px 0 4px; }
+  .auth-meta{ display:flex; gap:14px; align-items:center; font-size:11px; }
+  .auth-p{ color:var(--green); font-family:var(--mono); }
+  .auth-meta a{ color:var(--cyan); text-decoration:none; }
+  .auth-meta a:hover{ text-decoration:underline; }
+  .auth-note{ font-size:10px; color:var(--faint); line-height:1.5; margin-top:11px;
+    padding-top:10px; border-top:1px solid var(--line); }
 </style>
 </body>
 </html>

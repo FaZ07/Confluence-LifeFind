@@ -1,36 +1,25 @@
-# LifeLine — Missing Human Search Operations Console
+# LifeFind — Missing Human Search Operations Console
 
 **Find anyone — before it's too late. Every public source, one live command center.**
 
 > We don't surveil people. Every sighting, news mention and public post already exists —
-> it's just scattered. LifeLine unifies that public signal into one ranked, live command
-> center in seconds instead of weeks. One engine, **any** missing human.
+> it's just scattered. LifeFind unifies that public signal into one ranked, live command
+> center in seconds instead of weeks. One engine, **any** missing human, **any** city.
 
-This is the **open-source rebuild** of LifeLine. The original was wired to the Anakin
-Wire API + Groq. This version rips both out: it talks to **real, free, public sources
-directly** and runs a **fully deterministic** intelligence layer.
+The open-source rebuild of the *LifeLine* competition project — the Anakin Wire API and
+Groq LLM ripped out, then hardened into something that actually ships.
 
 ### ✦ No keys. No credits. No black box.
 
-| | Original (beacon) | This rebuild |
+| | Original (beacon) | LifeFind |
 |---|---|---|
-| Data | Anakin Wire API (credits, auth, 20s job-poll) | Google News · Bing News · GDELT · Reddit — direct, free |
-| Intelligence | Groq LLM (key, network, non-deterministic) | Deterministic engine — same numbers every run |
+| Data | Anakin Wire API (credits, auth, 20s job-poll) | Google News · Bing · GDELT · Reddit — direct, free |
+| Intelligence | Groq LLM (key, non-deterministic) | Deterministic engine — same numbers every run |
+| Geography | hardcoded Chennai table | **any city on earth** (OpenStreetMap, cached) |
+| Persistence | in-memory only | SQLite — cases survive restarts, **shareable by link** |
+| Handoff | — | official channels + CSV / print-to-PDF dossier |
 | API keys | `WIRE_API_KEY` + `GROQ_API_KEY` | **none** |
-| Offline | manual `mock` toggle | automatic graceful fallback per channel |
-| Tested | — | `pytest` over the whole engine |
-
----
-
-## Not just children — any missing human
-
-| Category | Example |
-|----------|---------|
-| 🧒 Missing child | the emotional lead-in |
-| 🧓 Dementia / Alzheimer's | silver-alert wandering |
-| 🌊 Disaster victim | floods, quakes, cyclones |
-| 🧭 Lost tourist | foreign nationals, language barriers |
-| 🔎 Missing person | the general case |
+| Hardening | — | retries · rate-limit · validation · logging · 31 tests |
 
 ---
 
@@ -45,81 +34,83 @@ python -m uvicorn app:app --port 8000
 Open **http://localhost:8000** → pick a category → **Begin Search Operation**.
 No `.env`, no signup, nothing to configure.
 
-Force the offline demo set (guaranteed-safe stage demo / CI):
-
 ```bash
-LIFELINE_OFFLINE=1 python -m uvicorn app:app --port 8000
+LIFELINE_OFFLINE=1 python -m uvicorn app:app   # force the offline demo set (CI / no-wifi stage)
+pytest -q                                        # 31 tests over the whole engine
 ```
 
 ---
 
-## The four real sources (`sources.py`)
+## What makes it a difference-maker
 
-Each channel is a **distinct, independent public engine** — not four queries to one API:
+- **Works anywhere** — type *Berlin*, *Tokyo*, *Cairo* or a Chennai neighbourhood; the
+  map centers and leads plot correctly. Place names resolve via OpenStreetMap
+  (cached, rate-limited to OSM policy) with an offline gazetteer fallback.
+- **Shareable live cases** — every search has a URL (`/?case=<id>`). Send it to
+  volunteers or police and they watch the same leads arrive in real time. Cases
+  persist in SQLite.
+- **Authority handoff** — LifeFind only aggregates *public* signal; it never replaces
+  the authorities. It surfaces the right official channels for the case's region
+  (Childline 1098, NCMEC, NamUs, Missing People, INTERPOL …) so the next click is a
+  real report — plus one-click **CSV** and a **print-to-PDF dossier** to hand police a
+  ranked lead package.
+
+## The four real sources (`sources.py`)
 
 | Channel | Engine | Auth |
 |---------|--------|------|
 | News wire | Google News RSS | none |
 | Local news | Bing News RSS | none |
-| Global monitor | GDELT 2.0 Doc API (worldwide news monitor) | none |
+| Global monitor | GDELT 2.0 Doc API | none |
 | Sightings | Reddit search JSON | none |
 
-Graceful, honest fallback per channel: if a source is blocked or rate-limited
-(e.g. Reddit 403 from a datacenter IP, GDELT 429 under burst), the channel first
-falls back to **real Google News** for its own angle — still live data — and only
-drops to a bundled offline set on total network loss. So a live demo can never
-hard-fail, and you never silently show canned data while you have internet.
-
----
+Graceful, honest fallback per channel: a blocked/rate-limited source falls back to
+**real Google News** for its angle (still live data), and only drops to a bundled
+offline set on total network loss — never silently canned while you have internet.
 
 ## Deterministic intelligence (`intel.py`)
 
-Everything the LLM used to do, computed straight from the scored leads:
-
-- **Signal Fusion** — 2+ independent reports at the same named place fire a
-  `⊕ SIGNAL FUSION` alert. Pure set arithmetic.
-- **Priority Zones** — leads grouped by place, ranked by
-  `total signal + corroboration + source diversity + specificity`, labelled HIGH/MEDIUM/LOW.
-- **Auto Timeline** — chronological event log built from real lead dates.
-- **Commander Chat** — intent-routed answers that quote the actual lead evidence
-  ("why Marina Beach?" → cites the sources). Never fabricates.
-- **Search Plan** — deterministic Alpha/Bravo/Charlie deployment order with a
-  computed coverage estimate.
-
-A judge can ask *"why is this the priority zone?"* and you point at the arithmetic.
-
----
+Signal fusion · priority zones (HIGH/MED/LOW) · timeline · intent-routed commander
+chat (quotes the actual evidence) · tactical search plan — every output computed
+from the scored leads. A judge can ask *"why this zone?"* and you point at the
+arithmetic.
 
 ## Scoring (`scoring.py`)
 
 ```
-score =  source_weight * 30   (channel credibility)
-       + location_match * 25   (mentions the last-seen place)
-       + clothing_match * 20   (mentions what they were wearing)
-       + recency        * 15   (how fresh)
-       + name_match     * 10   (names the subject)
+score = source_weight*30 + location_match*25 + clothing_match*20 + recency*15 + name_match*10
 ```
 
 Every point on the confidence bar is explainable — the components add up exactly.
 
 ---
 
-## Files
+## Hardening
+
+Input validation + field clamping · per-client rate limiting on search · retries with
+backoff on every outbound call · structured logging · CORS · `/api/health` · graceful
+degradation everywhere (read-only filesystem, blocked source, geocoder down — nothing
+hard-fails). All config is env-driven (`settings.py`).
 
 | File | Purpose |
 |------|---------|
-| `app.py` | FastAPI: search, case, chat, search-plan endpoints |
-| `sources.py` | Four free public sources + geocoder + offline fallback |
+| `app.py` | FastAPI: search, case, chat, plan, authorities, export, health |
+| `sources.py` | Four free public sources + retry/fallback |
+| `geo.py` | Global geocoding (OSM) + offline gazetteer |
 | `intel.py` | Deterministic fusion, zones, timeline, chat, plan |
-| `scoring.py` | Deterministic, explainable lead scoring + de-dup |
-| `static/index.html` | Full command center UI — no build step |
-| `tests/` | `pytest` over the deterministic engine |
+| `scoring.py` | Deterministic, explainable scoring + de-dup |
+| `store.py` | SQLite persistence (shareable cases) |
+| `authorities.py` | Region → official channels |
+| `export.py` | CSV + print-to-PDF dossier |
+| `settings.py` | Env-driven configuration |
+| `static/index.html` | Command center UI — no build step |
+| `tests/` | 31 pytest cases |
 
-```bash
-pytest -q   # run the suite
-```
+### Deploying (Vercel)
+Set `LIFELINE_DB=/tmp/lifefind.db` (serverless filesystems are read-only except `/tmp`).
+Everything else works out of the box with no env at all.
 
 ---
 
 *The original competition build lives on, frozen, as `beacon`. This is the version
-that runs anywhere, forever, for free.*
+that runs anywhere, for anyone, for free.*

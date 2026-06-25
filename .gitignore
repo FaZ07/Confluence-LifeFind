@@ -32,3 +32,8 @@ Thumbs.db
 
 # Optional local env (no keys are required to run LifeLine)
 .env
+
+# Persistence (SQLite)
+*.db
+*.db-wal
+*.db-shm

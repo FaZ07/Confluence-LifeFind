@@ -55,13 +55,20 @@ def _short_age(date_str: str | None) -> str:
 # ----------------------------------------------------------------------
 # A — Signal Fusion (deterministic: 2+ independent reports at one named place)
 # ----------------------------------------------------------------------
-def compute_signal_fusion(leads: list[dict]) -> dict:
+def _generics(extra: set[str] | None) -> set[str]:
+    """The set of place labels treated as 'city-level' (too coarse to fuse on):
+    the static India seed plus the case's own resolved city, passed in per-case."""
+    return _GENERIC_PLACES | {p for p in (extra or set()) if p}
+
+
+def compute_signal_fusion(leads: list[dict], generic: set[str] | None = None) -> dict:
     """Group leads by named location; a place with 2+ independent sources fuses.
     Generic city-level geocoder fallbacks are excluded — only specific places count."""
+    gen = _generics(generic)
     groups: dict[str, list[str]] = defaultdict(list)
     for lead in leads:
         place = (lead.get("place") or "").strip()
-        if place and place not in _GENERIC_PLACES:
+        if place and place not in gen:
             groups[place].append(lead["id"])
 
     by_lead: dict[str, dict] = {}
@@ -79,7 +86,8 @@ def compute_signal_fusion(leads: list[dict]) -> dict:
 # ----------------------------------------------------------------------
 # Zone aggregation — the spine of every commander output
 # ----------------------------------------------------------------------
-def _zone_stats(leads: list[dict]) -> list[dict]:
+def _zone_stats(leads: list[dict], generic: set[str] | None = None) -> list[dict]:
+    gen = _generics(generic)
     groups: dict[str, dict] = {}
     for l in leads:
         place = (l.get("place") or "Unknown").strip()
@@ -87,7 +95,7 @@ def _zone_stats(leads: list[dict]) -> list[dict]:
         if g is None:
             g = groups[place] = {
                 "place": place, "count": 0, "sum": 0, "max": 0,
-                "latest": "", "sources": set(), "specific": place not in _GENERIC_PLACES,
+                "latest": "", "sources": set(), "specific": place not in gen,
             }
         score = l.get("match_score", 0)
         g["count"] += 1
@@ -128,13 +136,14 @@ def _zone_reason(z: dict) -> str:
 # ----------------------------------------------------------------------
 # Commander + timeline + relevance — the full intelligence payload
 # ----------------------------------------------------------------------
-def _relevance(leads: list[dict]) -> dict:
+def _relevance(leads: list[dict], generic: set[str] | None = None) -> dict:
     """Deterministic 0-10 per lead, derived from its explainable match_score
     (+1 if it lands on a specific, non-generic place). Drives the UI's de-clutter."""
+    gen = _generics(generic)
     out = {}
     for l in leads:
         base = round(l.get("match_score", 0) / 10)
-        specific = (l.get("place") or "") not in _GENERIC_PLACES and bool(l.get("place"))
+        specific = bool(l.get("place")) and (l.get("place") or "") not in gen
         out[l["id"]] = max(0, min(10, base + (1 if specific else 0)))
     return out
 
@@ -157,14 +166,15 @@ def _timeline(leads: list[dict], zones: list[dict]) -> list[dict]:
     return events
 
 
-def analyze_case(leads: list[dict], child: dict) -> dict:
+def analyze_case(leads: list[dict], child: dict, generic_places: set[str] | None = None) -> dict:
     """Single deterministic pass → fusion + commander zones + timeline + relevance.
-    Safe with zero leads (returns a graceful empty payload)."""
-    fusion = compute_signal_fusion(leads)
+    `generic_places` adds the case's own resolved city to the city-level set so
+    fusion stays meaningful in any city. Safe with zero leads."""
+    fusion = compute_signal_fusion(leads, generic_places)
     if not leads:
         return {"fusion": fusion, "commander": None, "timeline": [], "relevance": {}}
 
-    zones = _zone_stats(leads)
+    zones = _zone_stats(leads, generic_places)
     top3 = zones[:3]
     name = child.get("name") or "the subject"
 
@@ -196,7 +206,7 @@ def analyze_case(leads: list[dict], child: dict) -> dict:
         "fusion": fusion,
         "commander": commander,
         "timeline": _timeline(leads, zones),
-        "relevance": _relevance(leads),
+        "relevance": _relevance(leads, generic_places),
     }
 
 
