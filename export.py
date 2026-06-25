@@ -48,6 +48,28 @@ def dossier_html(case: dict) -> str:
         for i, l in enumerate(leads)
     ) or "<tr><td colspan=7>No leads.</td></tr>"
 
+    corr = intel.get("corroboration") or []
+    mv = intel.get("movement")
+    cl = intel.get("cluster")
+    sa = intel.get("search_area")
+    cons = intel.get("contradictions") or []
+    inv = []
+    if cons:
+        inv.append('<div class="warn"><b>Possible conflict:</b> '
+                   + _esc(" ".join(c["detail"] for c in cons)) + "</div>")
+    if corr:
+        inv.append("<b>Cross-source corroboration</b><ul>"
+                   + "".join(f"<li>{_esc(c['detail'])}</li>" for c in corr) + "</ul>")
+    if mv:
+        inv.append(f"<b>Report chronology</b><p>{_esc(mv['detail'])}</p>")
+    if cl:
+        inv.append(f"<b>Activity cluster</b><p>{_esc(cl['detail'])}</p>")
+    if sa:
+        hubs = ", ".join(h["place"] for h in sa.get("transport_hubs", []))
+        inv.append(f"<b>Search area</b><p>{_esc(sa['detail'])}"
+                   + (f" Transport hubs: {_esc(hubs)}." if hubs else "") + "</p>")
+    invest_html = ("<h3>Investigation summary</h3>" + "".join(inv)) if inv else ""
+
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>LifeFind dossier — {_esc(child.get('name', 'case'))}</title>
 <style>
@@ -58,6 +80,8 @@ def dossier_html(case: dict) -> str:
   table{{width:100%;border-collapse:collapse;margin:8px 0 22px;font-size:12.5px}}
   th,td{{text-align:left;border-bottom:1px solid #ddd;padding:6px 8px;vertical-align:top}}
   th{{background:#f4f4f4}} .banner{{background:#fff7e6;border:1px solid #ffd591;padding:10px 12px;border-radius:6px;font-size:12px;margin-bottom:18px}}
+  .warn{{background:#fff1f0;border:1px solid #ffa39e;padding:8px 12px;border-radius:6px;margin:8px 0;font-size:12.5px}}
+  ul{{margin:6px 0 14px;padding-left:20px;font-size:13px}} p{{font-size:13px;margin:4px 0 14px}}
   @media print{{ a{{color:#111;text-decoration:none}} }}
 </style></head><body>
 <h1>MISSING — {_esc(child.get('name', 'Unknown'))}</h1>
@@ -74,6 +98,7 @@ It is decision-support for searchers and authorities — not a substitute for an
 </div>
 <h3>Priority zones</h3>
 <table><tr><th>#</th><th>Zone</th><th>Confidence</th><th>Why</th></tr>{zone_rows}</table>
+{invest_html}
 <h3>Leads ({len(leads)}) — ranked by match score</h3>
 <table><tr><th>#</th><th>Score</th><th>Source</th><th>Title</th><th>Place</th><th>Date</th><th>Link</th></tr>{lead_rows}</table>
 </body></html>"""

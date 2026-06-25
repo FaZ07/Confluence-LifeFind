@@ -75,6 +75,24 @@ chat (quotes the actual evidence) · tactical search plan — every output compu
 from the scored leads. A judge can ask *"why this zone?"* and you point at the
 arithmetic.
 
+## Investigation support (`analysis.py`)
+
+Turns isolated clues into evidence — all deterministic, no ML:
+
+- **Cross-source corroboration** — N independent sources agreeing on a place,
+  clothing item or age, with the time window (*"4 sources reference Triplicane within 24h"*).
+- **Report chronology** — the ordered sequence of *reported* locations (framed
+  honestly as report order, not a claim the subject physically moved).
+- **Geographic clustering** — weighted centre of activity + the radius covering
+  ~80% of signal (*"75% within 2.9 km of Triplicane"*).
+- **Search-area generation** — primary / secondary areas, transport hubs (derived
+  from real reported places) and the movement corridor — drawn on the map.
+- **Contradiction engine** — flags conflicting appearance descriptions across sources.
+
+This is what takes it from a search *aggregator* to an *investigation-support* tool.
+(Deliberately **not** included: face / age / gender estimation from photos — bias-prone
+overclaim that breaks the deterministic, no-keys design.)
+
 ## Scoring (`scoring.py`)
 
 ```
@@ -98,6 +116,7 @@ hard-fails). All config is env-driven (`settings.py`).
 | `sources.py` | Four free public sources + retry/fallback |
 | `geo.py` | Global geocoding (OSM) + offline gazetteer |
 | `intel.py` | Deterministic fusion, zones, timeline, chat, plan |
+| `analysis.py` | Corroboration, movement, clustering, search area, contradictions |
 | `scoring.py` | Deterministic, explainable scoring + de-dup |
 | `store.py` | SQLite persistence (shareable cases) |
 | `authorities.py` | Region → official channels |

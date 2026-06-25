@@ -330,6 +330,26 @@
       </div>
     </div>
 
+    <!-- INVESTIGATION SUPPORT — deterministic corroboration / movement / cluster -->
+    <div class="panel invest hidden" id="investPanel">
+      <div class="p-h"><span class="t">Investigation Support</span><span class="c">deterministic · evidence-grade</span></div>
+      <div id="ivContra" class="iv-contra hidden"></div>
+      <div class="invest-grid">
+        <div class="invest-col">
+          <div class="iv-k">⊕ Cross-source corroboration</div>
+          <div id="ivCorr" class="iv-body"></div>
+        </div>
+        <div class="invest-col">
+          <div class="iv-k">↪ Report chronology</div>
+          <div id="ivMove" class="iv-body"></div>
+        </div>
+        <div class="invest-col">
+          <div class="iv-k">◎ Activity cluster &amp; search area</div>
+          <div id="ivCluster" class="iv-body"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- COMMANDER CHAT — appears after AI intelligence is ready -->
     <div class="panel cc-chat hidden" id="chatPanel">
       <div class="p-h">
@@ -369,7 +389,7 @@
 const $ = id => document.getElementById(id);
 const FIELDS=["name","age","last_seen_time","last_seen_location","clothing","distinguishing_features"];
 let caseId=null, poll=null, dispCount=0, CATS=[], activeCat="child", feedFilter="all";
-let map=null, heatLayer=null, markerLayer=null, zoneLayer=null, lastZone=null, curMax=100;
+let map=null, heatLayer=null, markerLayer=null, zoneLayer=null, areaLayer=null, lastZone=null, curMax=100;
 window._fusionByLead={}; window._relevance={};
 
 fetch("/api/categories").then(r=>r.json()).then(cats=>{ CATS=cats;
@@ -418,7 +438,39 @@ function initMap(){
   map=L.map("map",{zoomControl:true,attributionControl:true,preferCanvas:true}).setView([13.06,80.25],11);
   L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     {maxZoom:19, subdomains:"abcd", attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(map);
-  markerLayer=L.layerGroup().addTo(map); zoneLayer=L.layerGroup().addTo(map);
+  markerLayer=L.layerGroup().addTo(map); zoneLayer=L.layerGroup().addTo(map); areaLayer=L.layerGroup().addTo(map);
+}
+function hubIcon(){ return L.divIcon({className:"", iconSize:[16,16], iconAnchor:[8,8], html:`<div class="hub"></div>`}); }
+function renderInvestigation(intel){
+  const corr=intel.corroboration||[], mv=intel.movement, cl=intel.cluster, sa=intel.search_area, cons=intel.contradictions||[];
+  const any=corr.length||mv||cl||sa||cons.length;
+  $("investPanel").classList.toggle("hidden", !any);
+  if(!any) return;
+  $("ivCorr").innerHTML = corr.length
+    ? corr.map(c=>`<div class="iv-row"><span class="iv-badge">×${c.source_count}</span><span>${escHtml(c.detail)}</span></div>`).join("")
+    : `<div class="iv-empty">No multi-source agreement yet.</div>`;
+  $("ivMove").innerHTML = mv
+    ? `<div class="iv-line">${escHtml(mv.detail)}</div>`+(mv.legs||[]).map(l=>`<div class="iv-leg">${escHtml(l.from)} <span>→</span> ${escHtml(l.to)} <b>${l.km} km</b></div>`).join("")
+    : `<div class="iv-empty">Need reports at 2+ distinct places.</div>`;
+  let h="";
+  if(cl) h+=`<div class="iv-stat"><b>${cl.coverage_pct}%</b> of signal within <b>${cl.radius_km} km</b> of ${escHtml(cl.anchor)}</div>`;
+  if(sa){ h+=`<div class="iv-line">${escHtml(sa.detail)}</div>`;
+    if(sa.transport_hubs&&sa.transport_hubs.length) h+=`<div class="iv-hubs">⬡ Transport hubs: ${sa.transport_hubs.map(x=>escHtml(x.place)).join(", ")}</div>`; }
+  $("ivCluster").innerHTML = h || `<div class="iv-empty">Not enough geolocated leads.</div>`;
+  if(cons.length){ $("ivContra").classList.remove("hidden");
+    $("ivContra").innerHTML=`<span class="iv-warn">⚠ CONFLICT</span> ${escHtml(cons.map(c=>c.detail).join("  "))}`; }
+  else $("ivContra").classList.add("hidden");
+  drawAreas(sa, mv);
+}
+function drawAreas(sa, mv){
+  if(!areaLayer) return; areaLayer.clearLayers();
+  if(sa){
+    if(sa.primary) L.circle([sa.primary.lat,sa.primary.lng],{radius:sa.primary.radius_km*1000,color:"#62E8FF",weight:1.4,opacity:.85,fillColor:"#62E8FF",fillOpacity:.06}).addTo(areaLayer);
+    if(sa.secondary) L.circle([sa.secondary.lat,sa.secondary.lng],{radius:sa.secondary.radius_km*1000,color:"#62E8FF",weight:1,opacity:.4,fill:false,dashArray:"4 7"}).addTo(areaLayer);
+    (sa.transport_hubs||[]).forEach(hb=>L.marker([hb.lat,hb.lng],{icon:hubIcon(),title:hb.place}).addTo(areaLayer));
+  }
+  if(mv&&mv.path&&mv.path.length>1)
+    L.polyline(mv.path.map(p=>[p.lat,p.lng]),{color:"#FFB84D",weight:2,opacity:.7,dashArray:"6 6"}).addTo(areaLayer);
 }
 function pulseIcon(k){ return L.divIcon({className:"", iconSize:[16,16], iconAnchor:[8,8],
   html:`<div class="mk mk-${k}"><span class="ring"></span><span class="core"></span></div>`}); }
@@ -534,6 +586,7 @@ function resetOp(){
   $("chatPanel").classList.add("hidden"); $("planModal").classList.add("hidden");
   $("chatMsgs").innerHTML='<div class="chat-msg ai"><div class="chat-bubble">Commander online. Ask me why a zone was prioritized, what teams should do, or what the evidence shows.</div></div>';
   _authLoaded=false; $("authorities").innerHTML="";
+  $("investPanel").classList.add("hidden"); if(areaLayer) areaLayer.clearLayers();
   if(history.replaceState) history.replaceState({}, "", location.pathname);
 }
 
@@ -688,7 +741,7 @@ async function refresh(){
   else if(c.done){ $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Analysing…"; $("mapStat").textContent="AI analysing leads…"; }
   else $("mapStat").textContent="aggregating sources…";
 
-  if(c.intelligence) renderIntelligence(c.intelligence);
+  if(c.intelligence){ renderIntelligence(c.intelligence); renderInvestigation(c.intelligence); }
   if(c.done) loadAuthorities();
   renderProfile(c.child);
   renderFeed(c);
@@ -816,6 +869,33 @@ async function refresh(){
   .auth-meta a:hover{ text-decoration:underline; }
   .auth-note{ font-size:10px; color:var(--faint); line-height:1.5; margin-top:11px;
     padding-top:10px; border-top:1px solid var(--line); }
+
+  /* ---- Investigation Support ---- */
+  .invest{ margin-top:14px; }
+  .invest-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; }
+  .invest-col{ padding:14px 16px; border-left:1px solid var(--line); }
+  .invest-col:first-child{ border-left:none; }
+  .iv-k{ font-family:var(--mono); font-size:10px; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:11px; }
+  .iv-body{ font-size:12px; color:var(--ink); line-height:1.55; }
+  .iv-row{ display:flex; gap:9px; align-items:flex-start; padding:5px 0; }
+  .iv-badge{ flex:none; font-family:var(--mono); font-size:10px; font-weight:600; color:var(--amber);
+    background:rgba(255,184,77,.1); border:1px solid rgba(255,184,77,.28); border-radius:5px; padding:1px 6px; }
+  .iv-line{ color:var(--muted); margin-bottom:8px; }
+  .iv-leg{ font-family:var(--mono); font-size:11px; color:var(--ink); padding:3px 0; }
+  .iv-leg span{ color:var(--cyan); } .iv-leg b{ color:var(--amber); font-weight:600; }
+  .iv-stat{ font-size:13px; color:var(--ink); margin-bottom:9px; }
+  .iv-stat b{ color:var(--cyan); font-family:var(--mono); }
+  .iv-hubs{ font-size:11px; color:var(--green); margin-top:8px; }
+  .iv-empty{ font-size:11.5px; color:var(--faint); }
+  .iv-contra{ margin:0 16px 4px; padding:10px 14px; border-radius:9px; font-size:12px; color:#ffd2d2;
+    background:rgba(255,91,91,.08); border:1px solid rgba(255,91,91,.32); }
+  .iv-warn{ font-family:var(--mono); font-size:9.5px; letter-spacing:1px; font-weight:600; color:var(--red);
+    border:1px solid rgba(255,91,91,.4); border-radius:5px; padding:2px 6px; margin-right:8px; }
+  .hub{ width:12px; height:12px; border:2px solid var(--green); background:rgba(70,224,160,.25);
+    border-radius:3px; box-shadow:0 0 8px rgba(70,224,160,.5); }
+  @media (max-width:1180px){ .invest-grid{ grid-template-columns:1fr; }
+    .invest-col{ border-left:none; border-top:1px solid var(--line); } .invest-col:first-child{ border-top:none; } }
 </style>
 </body>
 </html>

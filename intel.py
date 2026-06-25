@@ -15,6 +15,8 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timezone
 
+import analysis
+
 _GENERIC_PLACES = {
     "Chennai", "Andhra Pradesh", "Kerala", "Bengaluru", "Mumbai",
     "Delhi", "Kolkata", "Hyderabad", "Kochi",
@@ -171,8 +173,11 @@ def analyze_case(leads: list[dict], child: dict, generic_places: set[str] | None
     `generic_places` adds the case's own resolved city to the city-level set so
     fusion stays meaningful in any city. Safe with zero leads."""
     fusion = compute_signal_fusion(leads, generic_places)
+    gen = _generics(generic_places)
     if not leads:
-        return {"fusion": fusion, "commander": None, "timeline": [], "relevance": {}}
+        return {"fusion": fusion, "commander": None, "timeline": [], "relevance": {},
+                "corroboration": [], "movement": None, "cluster": None,
+                "search_area": None, "contradictions": []}
 
     zones = _zone_stats(leads, generic_places)
     top3 = zones[:3]
@@ -202,12 +207,14 @@ def analyze_case(leads: list[dict], child: dict, generic_places: set[str] | None
         "overall_assessment": assessment,
         "recommended_action": action,
     }
-    return {
+    payload = {
         "fusion": fusion,
         "commander": commander,
         "timeline": _timeline(leads, zones),
         "relevance": _relevance(leads, generic_places),
     }
+    payload.update(analysis.build(leads, child, gen))   # corroboration, movement, cluster, area, contradictions
+    return payload
 
 
 # ----------------------------------------------------------------------
@@ -285,6 +292,28 @@ def chat_response(message: str, case: dict) -> str:
         out.append(f"Expected coverage {plan['coverage_estimate']}. {plan['commander_briefing']}")
         return "\n".join(out)
 
+    # 2b) movement / report chronology
+    if any(k in m for k in ("movement", "path", "route", "moving", "headed", "direction", "chronolog")):
+        mv = intel.get("movement")
+        if mv:
+            legs = "\n".join(f"  {l['from']} → {l['to']}  ({l['km']} km)" for l in mv.get("legs", []))
+            return mv["detail"] + ("\n" + legs if legs else "")
+        return "No movement sequence yet — need reports at 2+ distinct places."
+
+    # 2c) cluster / search radius / area
+    if any(k in m for k in ("cluster", "radius", "how far", "centre", "center", "search area", "distance", " km")):
+        cl, sa = intel.get("cluster"), intel.get("search_area")
+        lines = [x for x in [cl["detail"] if cl else None, sa["detail"] if sa else None] if x]
+        if sa and sa.get("transport_hubs"):
+            lines.append("Transport hubs: " + ", ".join(h["place"] for h in sa["transport_hubs"]))
+        return "\n".join(lines) or "Not enough geolocated leads to model a search area yet."
+
+    # 2d) contradictions
+    if any(k in m for k in ("contradict", "conflict", "discrepan", "mismatch")):
+        cons = intel.get("contradictions") or []
+        return "\n".join(c["detail"] for c in cons) if cons else \
+            "No appearance contradictions detected across sources."
+
     # 3) zones / priority / where to focus
     if any(k in m for k in ("zone", "priorit", "where", "focus", "concentrate", "why")):
         return _zones_text(zones)
@@ -303,7 +332,10 @@ def chat_response(message: str, case: dict) -> str:
         return _timeline_text(intel.get("timeline") or [])
 
     # 7) fusion / corroboration
-    if any(k in m for k in ("fusion", "corrobor", "confirm", "independent")):
+    if any(k in m for k in ("fusion", "corrobor", "confirm", "independent", "agree")):
+        corr = intel.get("corroboration") or []
+        if corr:
+            return "Cross-source corroboration:\n" + "\n".join(f"  • {c['detail']}" for c in corr)
         if fusion_top:
             return (f"⊕ Signal fusion: {fusion_top['location']} is corroborated by "
                     f"{fusion_top['source_count']} independent sources.")
