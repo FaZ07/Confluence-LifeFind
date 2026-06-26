@@ -277,6 +277,8 @@
   .tl-state{ font-family:var(--mono); font-size:9px; padding:2px 8px; border-radius:20px; font-weight:600; }
   .tl-state.verified{ color:#16a34a; background:rgba(34,197,94,.12); } .tl-state.dismissed{ color:var(--faint); background:var(--card-2); }
   .tl-state.reviewing{ color:#b45309; background:rgba(245,158,11,.12); } .tl-state.new{ color:var(--primary); background:rgba(37,99,235,.1); }
+  .tl-state.escalated{ color:#b45309; background:rgba(245,158,11,.18); }
+  .tbtn.escalate:hover{ color:#b45309; border-color:var(--warn); } .tbtn.escalate.on{ background:var(--warn); color:#fff; border-color:transparent; }
   .tl-acts{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
   .tbtn{ font-size:10.5px; font-weight:600; padding:6px 11px; border-radius:8px; cursor:pointer; border:1px solid var(--line-2); background:var(--card-solid); color:var(--muted); transition:.13s; }
   .tbtn:hover{ color:var(--ink); }
@@ -313,6 +315,61 @@
   .audit-act{ flex:1; min-width:0; color:var(--ink); }
   .audit-act b{ color:var(--primary); font-weight:600; }
   .audit-hash{ font-family:var(--mono); font-size:9px; color:var(--faint); flex:none; }
+
+  /* ===== Entity graph: forensic "Why" panel · live triage states · ontology overlay ===== */
+  .kg-wrap{ position:relative; }
+  .kg-tag{ position:absolute; left:12px; top:12px; z-index:20; display:flex; gap:6px; }
+  .kg-tbtn{ font-family:var(--mono); font-size:10px; letter-spacing:.5px; padding:6px 11px; border-radius:8px; cursor:pointer;
+    background:var(--card-2); border:1px solid var(--line-2); color:var(--muted); transition:.14s; }
+  .kg-tbtn:hover{ color:var(--ink); } .kg-tbtn.on{ color:#fff; background:var(--primary); border-color:transparent; }
+  .gn{ cursor:pointer; }
+  .gn .vring{ fill:none; stroke:var(--green); stroke-width:2.4; opacity:0; transition:.3s; }
+  .gn.verified .vring{ opacity:1; }
+  .gn .ering{ fill:none; stroke:var(--warn); stroke-width:2.4; stroke-dasharray:4 3; opacity:0; }
+  .gn.escalated .ering{ opacity:1; animation:erot 6s linear infinite; }
+  @keyframes erot{ to{ stroke-dashoffset:-28; } }
+  .gn.picked .dot{ stroke:var(--primary); stroke-width:2.5; }
+
+  .kg-why{ position:absolute; top:12px; right:12px; width:272px; max-height:calc(100% - 24px); overflow:auto; z-index:30;
+    background:var(--card-solid); border:1px solid var(--line-2); border-radius:14px; box-shadow:var(--shadow-lg);
+    padding:16px; opacity:0; transform:translateX(10px); pointer-events:none; transition:.2s; }
+  .kg-why.show{ opacity:1; transform:none; pointer-events:auto; }
+  .kw-x{ position:absolute; top:11px; right:12px; cursor:pointer; border:none; background:none; color:var(--faint); font-size:15px; line-height:1; }
+  .kw-x:hover{ color:var(--ink); }
+  .kw-type{ font-family:var(--mono); font-size:9px; letter-spacing:1.4px; text-transform:uppercase; color:var(--primary); font-weight:600; }
+  .kw-label{ font-family:var(--display); font-size:17px; font-weight:700; margin:5px 0 13px; line-height:1.2; padding-right:18px; word-break:break-word; }
+  .kw-conf{ display:flex; align-items:center; gap:12px; margin-bottom:13px; }
+  .kw-ring{ width:52px; height:52px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+    background:conic-gradient(var(--primary) calc(var(--p,0)*1%), rgba(15,23,42,.09) 0); }
+  .kw-ring span{ width:41px; height:41px; border-radius:50%; background:var(--card-solid); display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:12.5px; font-weight:700; color:var(--ink); }
+  .kw-conf-t{ font-size:10.5px; color:var(--muted); line-height:1.45; }
+  .kw-conf-t b{ color:var(--ink); }
+  .kw-line{ font-size:12px; color:var(--ink); line-height:1.55; margin-bottom:13px; }
+  .kw-line b{ color:var(--primary); }
+  .kw-src-h{ font-family:var(--mono); font-size:9px; letter-spacing:1.1px; text-transform:uppercase; color:var(--faint); margin-bottom:6px; }
+  .kw-src{ display:flex; align-items:center; gap:7px; padding:7px 0; border-top:1px solid var(--line); font-size:11px; color:var(--ink); }
+  .kw-src:first-of-type{ border-top:none; }
+  .kw-src .kw-dot{ width:7px; height:7px; border-radius:50%; flex:none; background:var(--primary); }
+  .kw-src .kw-dot.social{ background:var(--violet); } .kw-src .kw-dot.database{ background:var(--green); } .kw-src .kw-dot.news{ background:var(--cyan); }
+  .kw-src .kw-nm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .kw-src a{ color:var(--primary); text-decoration:none; font-size:10px; flex:none; }
+
+  .kg-schema{ position:absolute; inset:0; z-index:25; background:var(--card-solid); border-radius:14px; padding:20px 22px; overflow:auto;
+    opacity:0; pointer-events:none; transition:.2s; }
+  .kg-schema.show{ opacity:1; pointer-events:auto; }
+  .ks-h{ font-family:var(--display); font-weight:700; font-size:16px; }
+  .ks-sub{ font-size:11.5px; color:var(--muted); margin:3px 0 16px; line-height:1.5; }
+  .ks-types{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+  .ks-type{ display:flex; align-items:center; gap:8px; padding:8px 13px; border-radius:11px; background:var(--card-2); border:1px solid var(--line); font-size:12px; font-weight:600; }
+  .ks-type i{ width:11px; height:11px; border-radius:50%; flex:none; }
+  .ks-rel{ padding:13px 0; border-top:1px solid var(--line); }
+  .ks-rel:first-of-type{ border-top:none; }
+  .ks-rel-h{ font-size:13px; font-weight:600; display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .ks-arrow{ font-family:var(--mono); font-size:10px; color:#fff; background:var(--primary); padding:2px 9px; border-radius:20px; font-weight:600; }
+  .ks-rel-d{ font-size:11.5px; color:var(--muted); margin-top:5px; line-height:1.5; }
+  .ks-rel-ex{ font-size:11px; color:var(--ink); margin-top:7px; padding:8px 11px; background:rgba(37,99,235,.06); border:1px solid rgba(37,99,235,.16); border-radius:9px; line-height:1.5; }
+  .ks-rel-ex b{ color:var(--primary); }
 
   /* ================= GLASS PANEL PRIMITIVE ================= */
   .panel{ background:var(--card); backdrop-filter:blur(20px) saturate(150%); border:1px solid var(--glass-border);
@@ -467,6 +524,9 @@
   .ic-foot button{ font-size:10.5px; font-weight:600; padding:5px 10px; border-radius:9px; cursor:pointer; color:var(--ink);
     background:var(--card-solid); border:1px solid var(--line-2); transition:.15s; }
   .ic-foot button:hover{ border-color:var(--primary); color:var(--primary); }
+  .ic-foot .lb-v:hover{ color:#16a34a; border-color:#16a34a; } .ic-foot .lb-v.on{ background:var(--green); color:#fff; border-color:transparent; }
+  .ic-foot .lb-e:hover{ color:#b45309; border-color:var(--warn); } .ic-foot .lb-e.on{ background:var(--warn); color:#fff; border-color:transparent; }
+  .ic-foot .lb-d:hover{ color:var(--red); border-color:var(--red); } .ic-foot .lb-d.on{ background:var(--red); color:#fff; border-color:transparent; }
   .ic-foot a{ font-size:10.5px; color:var(--cyan); text-decoration:none; }
 
   /* signal assessment popover */
@@ -1166,7 +1226,15 @@
         <div class="panel kg hidden" id="graphPanel">
           <div class="p-h"><span class="t">Entity Network<span class="info" tabindex="0" role="button" aria-label="What is the entity network?">i<span class="tipbox">A network of <b>who reported what, where</b>. Sources report locations; locations carry the clothing corroborated there; the subject anchors it. Bigger, brighter nodes are more central — the standout is the location the <b>most independent sources</b> agree on. Hover any node to trace its links.</span></span></span><span class="c">deterministic · network centrality</span></div>
           <div class="kg-central empty" id="graphCentral"></div>
-          <div class="kg-wrap"><div id="graphSvg" class="kg-svg"></div></div>
+          <div class="kg-wrap">
+            <div class="kg-tag">
+              <button class="kg-tbtn on" id="kgViewNet" onclick="kgView('net')" title="The entity network — who reported what, where.">◍ Network</button>
+              <button class="kg-tbtn" id="kgViewSchema" onclick="kgView('schema')" title="The ontology behind the graph: the object types and the typed links, with live examples from this case.">⊞ Schema</button>
+            </div>
+            <div id="graphSvg" class="kg-svg"></div>
+            <div class="kg-why" id="kgWhy"></div>
+            <div class="kg-schema" id="kgSchema"></div>
+          </div>
           <div class="kg-foot">
             <div class="kg-legend">
               <span><i class="kg-dot d-subject"></i>subject</span>
@@ -1174,7 +1242,7 @@
               <span><i class="kg-dot d-source"></i>source</span>
               <span><i class="kg-dot d-clothing"></i>clothing</span>
             </div>
-            <div class="kg-info" id="graphInfo">Hover a node to trace its connections.</div>
+            <div class="kg-info" id="graphInfo">Click a node for its forensic “why” · hover to trace links.</div>
           </div>
         </div>
         <div class="panel sr hidden" id="srPanel">
@@ -1621,11 +1689,13 @@ function renderGraph(g){
   if(!g||!g.nodes||g.nodes.length<3){ panel.classList.add("hidden"); return; }
   panel.classList.remove("hidden");
   const W=920,H=580, pos=kgLayout(g,W,H), byId={}; g.nodes.forEach(n=>byId[n.id]=n);
+  window._kg=g; const nstat=kgNodeStatus(g);   // live triage state per node (verified / escalated)
   let e=""; g.edges.forEach(ed=>{ const a=pos[ed.source], b=pos[ed.target]; if(!a||!b) return;
     e+=`<line class="ge" data-s="${escHtml(ed.source)}" data-t="${escHtml(ed.target)}" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke-width="${Math.max(.6,Math.min(3,ed.weight/45)).toFixed(2)}"/>`; });
   let nd=""; g.nodes.forEach(n=>{ const p=pos[n.id]; if(!p) return; const r=kgNodeR(n);
     const central=g.central&&g.central.id===n.id, lbl=n.label||"", disp=lbl.length>15?lbl.slice(0,14)+"…":lbl;
-    nd+=`<g class="gn ${central?'central':''}" data-id="${escHtml(n.id)}" tabindex="0">${central?`<circle class="glow" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+8).toFixed(1)}"/>`:""}<circle class="dot type-${n.type}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r.toFixed(1)}"/><text class="glabel" x="${p.x.toFixed(1)}" y="${(p.y+r+13).toFixed(1)}">${escHtml(disp)}</text></g>`; });
+    const stt=nstat[n.id]||{};
+    nd+=`<g class="gn ${central?'central':''} ${stt.v?'verified':''} ${stt.e?'escalated':''}" data-id="${escHtml(n.id)}" tabindex="0">${central?`<circle class="glow" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+8).toFixed(1)}"/>`:""}<circle class="ering" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+5).toFixed(1)}"/><circle class="vring" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+5).toFixed(1)}"/><circle class="dot type-${n.type}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r.toFixed(1)}"/><text class="glabel" x="${p.x.toFixed(1)}" y="${(p.y+r+13).toFixed(1)}">${escHtml(disp)}</text></g>`; });
   $("graphSvg").innerHTML=`<svg viewBox="0 0 ${W} ${H}" id="kgSvg" role="img" aria-label="Entity relationship network"><g class="kg-edges">${e}</g><g class="kg-nodes">${nd}</g></svg>`;
   const gc=$("graphCentral");
   if(g.central){ gc.classList.remove("empty"); gc.innerHTML=`◈ Most corroborated: <b>${escHtml(g.central.label)}</b> — ${g.central.sources} independent source${g.central.sources>1?'s':''} converge here`; }
@@ -1639,10 +1709,94 @@ function renderGraph(g){
       svg.querySelectorAll(".gn").forEach(o=>o.classList.toggle("dim",!keep.has(o.dataset.id)));
       svg.querySelectorAll(".ge").forEach(l=>{ const on=l.dataset.s===id||l.dataset.t===id; l.classList.toggle("hot",on); l.classList.toggle("dim",!on); });
       const nn=byId[id]; if(nn) $("graphInfo").innerHTML=kgNodeInfo(nn); };
-    const leave=()=>{ svg.classList.remove("focus"); svg.querySelectorAll(".gn,.ge").forEach(o=>o.classList.remove("dim","hot")); $("graphInfo").textContent="Hover a node to trace its connections."; };
+    const leave=()=>{ svg.classList.remove("focus"); svg.querySelectorAll(".gn,.ge").forEach(o=>o.classList.remove("dim","hot")); $("graphInfo").innerHTML="Click a node for its forensic “why” · hover to trace links."; };
     node.addEventListener("mouseenter",enter); node.addEventListener("mouseleave",leave);
     node.addEventListener("focus",enter); node.addEventListener("blur",leave);
+    node.addEventListener("click",()=>openWhy(id));
   });
+}
+// ---- live triage state per graph node (a place/source is verified/escalated if any of its leads are) ----
+function kgNodeStatus(g){
+  const leads=(window._lastCase||{}).leads||[], out={};
+  function mark(id,st){ if(st!=="verified"&&st!=="escalated") return; const o=out[id]=out[id]||{};
+    if(st==="verified") o.v=true; if(st==="escalated") o.e=true; }
+  leads.forEach(l=>{ if(l.place) mark("place:"+l.place,l.status); if(l.source_name) mark("source:"+l.source_name,l.status); });
+  return out;
+}
+// ---- the forensic "Why" panel: how this node was derived, with confidence + sources ----
+const SRC_DOT={news:"news",social:"social",database:"database",web:""};
+function openWhy(id){
+  const g=window._kg; if(!g) return; const n=(g.nodes||[]).find(x=>x.id===id); if(!n) return;
+  const pv=nodeProvenance(n);
+  document.querySelectorAll("#kgSvg .gn").forEach(o=>o.classList.toggle("picked",o.dataset.id===id));
+  const srcs=pv.sources.slice(0,6).map(s=>`<div class="kw-src"><i class="kw-dot ${SRC_DOT[s.type]||""}"></i><span class="kw-nm">${escHtml(s.name)}</span>${s.url?`<a href="${escHtml(s.url)}" target="_blank" rel="noopener">open ↗</a>`:`<span style="color:var(--faint);font-size:10px">+${s.score??""}</span>`}</div>`).join("");
+  $("kgWhy").innerHTML=`<button class="kw-x" onclick="closeWhy()" aria-label="Close">✕</button>
+    <div class="kw-type">${escHtml(n.type)} node</div>
+    <div class="kw-label">${escHtml(n.label)}</div>
+    <div class="kw-conf"><div class="kw-ring" style="--p:${pv.conf}"><span>${pv.conf}%</span></div>
+      <div class="kw-conf-t"><b>Confidence</b><br>${pv.confWhy}</div></div>
+    <div class="kw-line">${pv.line}</div>
+    ${pv.sources.length?`<div class="kw-src-h">${escHtml(pv.srcLabel)}</div>${srcs}`:""}`;
+  $("kgWhy").classList.add("show");
+}
+function closeWhy(){ const w=$("kgWhy"); if(w) w.classList.remove("show"); document.querySelectorAll("#kgSvg .gn.picked").forEach(o=>o.classList.remove("picked")); }
+function nodeProvenance(n){
+  const leads=(window._lastCase||{}).leads||[];
+  if(n.type==="place"){
+    const ls=leads.filter(l=>l.place===n.label), srcs=[...new Set(ls.map(l=>l.source_name))];
+    const avg=ls.length?ls.reduce((a,l)=>a+l.match_score,0)/ls.length:0;
+    const conf=Math.min(98,Math.round((srcs.length>=3?80:srcs.length===2?68:54)+Math.min(16,avg*0.18)));
+    return {conf, confWhy:`${srcs.length} independent source${srcs.length>1?"s":""} · avg lead ${Math.round(avg)}`,
+      line:`This location node was created by correlating <b>${ls.length} report${ls.length>1?"s":""}</b> from <b>${srcs.length} independent source${srcs.length>1?"s":""}</b>. Confidence rises with each independent source that converges here.`,
+      srcLabel:"Correlated from", sources:ls.map(l=>({name:l.source_name,type:l.source_type,url:l.url,score:l.match_score}))};
+  }
+  if(n.type==="source"){
+    const ls=leads.filter(l=>l.source_name===n.label), places=[...new Set(ls.map(l=>l.place).filter(Boolean))];
+    const conf=Math.min(95,Math.round(52+ls.length*8+places.length*4));
+    return {conf, confWhy:`${ls.length} lead${ls.length>1?"s":""} · ${escHtml(n.source_type||"web")} channel`,
+      line:`<b>${escHtml(n.label)}</b> contributed <b>${ls.length} lead${ls.length>1?"s":""}</b> referencing <b>${places.length} location${places.length>1?"s":""}</b>. Every lead is independently scored and individually auditable — no single source can move a decision alone.`,
+      srcLabel:"Locations it reported", sources:ls.map(l=>({name:l.place||"—",type:"",url:l.url,score:l.match_score}))};
+  }
+  if(n.type==="clothing"){
+    const ls=leads.filter(l=>(((l.title||"")+" "+(l.snippet||"")).toLowerCase()).includes(n.label.toLowerCase()));
+    const places=[...new Set(ls.map(l=>l.place).filter(Boolean))];
+    const conf=Math.min(94,Math.round(46+ls.length*12));
+    return {conf, confWhy:`detected in ${ls.length} report${ls.length>1?"s":""}`,
+      line:`The descriptor “<b>${escHtml(n.label)}</b>” was detected in the <b>text</b> of ${ls.length} report${ls.length>1?"s":""}, linking it to ${places.length} location${places.length>1?"s":""}. This is the bridge from raw report text to a structured attribute of the subject.`,
+      srcLabel:"Detected in", sources:ls.map(l=>({name:l.source_name,type:l.source_type,url:l.url,score:l.match_score}))};
+  }
+  return {conf:100, confWhy:"the anchor entity", line:`The <b>missing subject</b> — the anchor every lead is scored against. All other nodes connect back to here.`, srcLabel:"", sources:[]};
+}
+// ---- ontology / data-schema overlay ----
+function kgView(mode){
+  const sch=mode==="schema";
+  $("kgSchema").classList.toggle("show",sch);
+  $("kgViewSchema").classList.toggle("on",sch); $("kgViewNet").classList.toggle("on",!sch);
+  if(sch){ closeWhy(); buildSchema(); }
+}
+function buildSchema(){
+  const g=window._kg||{nodes:[],edges:[]};
+  const ex=rel=>{ const e=(g.edges||[]).find(x=>x.rel===rel); if(!e) return null;
+    const a=(g.nodes||[]).find(n=>n.id===e.source), b=(g.nodes||[]).find(n=>n.id===e.target);
+    return a&&b?{a:a.label,b:b.label,w:e.weight}:null; };
+  const rels=[
+    {h:["Source","reports","Location"], rel:"reports", d:"A public source (news wire, social post, monitor) names a place in connection with the subject. The link weight is the summed lead score — stronger, more numerous reports make a heavier edge.",
+      mk:e=>`<b>${escHtml(e.a)}</b> reported <b>${escHtml(e.b)}</b> — this edge exists because that source produced a scored lead placing the subject there.`},
+    {h:["Location","corroborates","Clothing"], rel:"corroborates", d:"A clothing descriptor from the subject profile was found in the report text tied to this location — turning free text into a structured attribute.",
+      mk:e=>`<b>${escHtml(e.a)}</b> carries <b>${escHtml(e.b)}</b> because the descriptor was detected in report text mentioning that location.`},
+    {h:["Subject","wearing","Clothing"], rel:"wearing", d:"The subject is linked to each clothing descriptor taken from the intake profile — the ground truth the reports are matched against.",
+      mk:e=>`The subject is <b>wearing</b> <b>${escHtml(e.b)}</b> (from the case profile).`},
+    {h:["Subject","last seen near","Location"], rel:"last seen near", d:"The subject anchors to the single most-corroborated location — the hotspot the signal-fusion layer ranks first.",
+      mk:e=>`Subject <b>last seen near</b> <b>${escHtml(e.b)}</b> — the most corroborated location in the network.`},
+  ];
+  const types=[["subject","#2563EB","Subject"],["place","#06B6D4","Location"],["source","#8B5CF6","Source"],["clothing","#F59E0B","Clothing"]];
+  $("kgSchema").innerHTML=`<div class="ks-h">The ontology behind the graph</div>
+    <div class="ks-sub">LifeFind doesn't show raw rows — it maps real-world <b>objects</b> joined by <b>typed links</b>. Here is the schema, with a live example pulled from this case.</div>
+    <div class="ks-types">${types.map(([k,c,l])=>`<div class="ks-type"><i style="background:${c}"></i>${l}</div>`).join("")}</div>
+    ${rels.map(r=>{ const e=ex(r.rel);
+      return `<div class="ks-rel"><div class="ks-rel-h">${escHtml(r.h[0])} <span class="ks-arrow">${escHtml(r.h[1])}</span> ${escHtml(r.h[2])}</div>
+        <div class="ks-rel-d">${r.d}</div>
+        ${e?`<div class="ks-rel-ex">↳ In this case: ${r.mk(e)}</div>`:""}</div>`; }).join("")}`;
 }
 // ---- CCTV / footage-source discovery (OpenStreetMap; not face recognition) ----
 function cctvIcon(){ return L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],html:`<div class="cctvm"></div>`}); }
@@ -1739,7 +1893,7 @@ function signalTip(l){ const b=l.breakdown||{}; const order=["source","location"
   const rows=order.filter(k=>b[k]&&b[k].got>0).map(k=>{ const x=b[k]; return `<div class="brk"><div class="brk-r"><span>${x.label}</span><b>+${x.got}</b></div><div class="brk-bar"><i style="width:${Math.round(100*x.got/x.max)}%"></i></div></div>`; }).join("");
   return `<div class="tip"><div class="tip-h">WHY THIS LEAD</div>${rows||'<div class="brk-r"><span>Recency &amp; source signal</span></div>'}</div>`; }
 function icard(l){
-  const tg=tier(l.match_score); const [s1,t1,s2,t2]=NEXT[l.status]; const mv=st=>`moveLead('${l.id}','${st}')`;
+  const tg=tier(l.match_score);
   const bars=[1,2,3].map(i=>`<i></i>`).join("");
   const fusionInfo=(window._fusionByLead||{})[l.id];
   const rel=window._relevance||{};
@@ -1757,8 +1911,9 @@ function icard(l){
     <div class="ic-foot">
       <span class="ts">${l.date||""}</span>
       <span class="acts">
-        ${t1?`<button onclick="${mv(s1)}">${t1}</button>`:""}
-        ${t2?`<button onclick="${mv(s2)}">${t2}</button>`:""}
+        <button class="lb-v ${l.status==='verified'?'on':''}" onclick="moveLead('${l.id}','verified')" title="Confirm this lead — turns its location green in the entity graph and logs the decision.">✓ Verify</button>
+        <button class="lb-e ${l.status==='escalated'?'on':''}" onclick="moveLead('${l.id}','escalated')" title="Escalate — flags its location amber for urgent attention and logs the decision.">⚑ Escalate</button>
+        <button class="lb-d ${l.status==='dismissed'?'on':''}" onclick="moveLead('${l.id}','dismissed')" title="Dismiss this lead — logs the decision.">✕ Dismiss</button>
         <a href="${l.url}" target="_blank" rel="noopener">open ↗</a>
       </span>
     </div></div>`;
@@ -1767,10 +1922,10 @@ async function moveLead(id,status){ await fetch(`/api/case/${caseId}/lead/${id}/
 function setFilter(f){ feedFilter=f; document.querySelectorAll(".fchip").forEach(c=>c.classList.toggle("on",c.dataset.f===f)); if(window._lastCase) renderFeed(window._lastCase); }
 
 function renderFeed(c){
-  const counts={all:c.leads.length,new:0,reviewing:0,verified:0,dismissed:0};
+  const counts={all:c.leads.length,new:0,reviewing:0,verified:0,escalated:0,dismissed:0};
   c.leads.forEach(l=>counts[l.status]++);
   if(!$("filters").dataset.built){ $("filters").dataset.built="1";
-    $("filters").innerHTML=["all","new","reviewing","verified","dismissed"].map(f=>`<span class="fchip ${f==='all'?'on':''}" data-f="${f}" onclick="setFilter('${f}')">${f}</span>`).join(""); }
+    $("filters").innerHTML=["all","new","reviewing","verified","escalated","dismissed"].map(f=>`<span class="fchip ${f==='all'?'on':''}" data-f="${f}" onclick="setFilter('${f}')">${f}</span>`).join(""); }
   document.querySelectorAll(".fchip").forEach(ch=>{ const f=ch.dataset.f; ch.textContent=`${f} ${counts[f]}`; });
   const list=c.leads.filter(l=>feedFilter==="all"||l.status===feedFilter).sort(byNewest);
   $("feed").innerHTML=list.map(icard).join("")||`<div class="ic-snip" style="padding:18px">No leads in this view yet.</div>`;
@@ -1877,7 +2032,7 @@ function renderTriage(c,zones){
 }
 function tlead(l){
   const tg=tier(l.match_score); const decided=(l.status==="verified"||l.status==="dismissed");
-  const stateLbl={new:"new",reviewing:"reviewing",verified:"approved",dismissed:"rejected"}[l.status]||l.status;
+  const stateLbl={new:"new",reviewing:"reviewing",verified:"approved",escalated:"escalated",dismissed:"rejected"}[l.status]||l.status;
   return `<div class="tlead ${decided?"decided":""}">
     <div class="tl-conf"><div class="tl-score">${l.match_score}</div><div class="tl-tier ${tg.k}">${tg.label}</div></div>
     <div class="tl-main">
@@ -1885,6 +2040,7 @@ function tlead(l){
       <div class="tl-sub"><span class="tl-badge">${escHtml(l.source_name||"source")}</span>${l.place?`<span class="tl-badge">📍 ${escHtml(l.place)}</span>`:""}<span class="tl-state ${l.status}">${escHtml(stateLbl)}</span></div>
       <div class="tl-acts">
         <button class="tbtn approve ${l.status==="verified"?"on":""}" onclick="decideLead('${l.id}','verified')" title="Confirm this lead — promotes it to Verified and writes an audit event.">✓ Approve</button>
+        <button class="tbtn escalate ${l.status==="escalated"?"on":""}" onclick="decideLead('${l.id}','escalated')" title="Escalate — flags its location amber in the entity graph and writes an audit event.">⚑ Escalate</button>
         <button class="tbtn reject ${l.status==="dismissed"?"on":""}" onclick="decideLead('${l.id}','dismissed')" title="Dismiss this lead — writes an audit event.">✕ Reject</button>
         <button class="tbtn prov" onclick="toggleProv('${l.id}',this)" title="Show exactly how this lead's score was computed and where it came from.">⌕ Why this score</button>
       </div>
