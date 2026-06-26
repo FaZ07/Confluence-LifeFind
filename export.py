@@ -9,6 +9,17 @@ import html
 import io
 from datetime import UTC, datetime
 
+_CSV_INJECT = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value) -> str:
+    """Neutralise spreadsheet formula injection. A lead title or place scraped from a
+    public source could start with = + - @ and would otherwise execute as a formula
+    when this CSV is opened in Excel/Sheets — exactly the file we hand to authorities.
+    Prefix any such cell with an apostrophe so the spreadsheet renders it as text."""
+    s = "" if value is None else str(value)
+    return "'" + s if s[:1] in _CSV_INJECT else s
+
 
 def leads_csv(case: dict) -> str:
     leads = sorted(case.get("leads", []), key=lambda l: -l.get("match_score", 0))
@@ -17,8 +28,10 @@ def leads_csv(case: dict) -> str:
     w.writerow(["rank", "match_score", "source", "title", "date", "place", "status", "url"])
     for i, l in enumerate(leads, 1):
         w.writerow([
-            i, l.get("match_score", 0), l.get("source_name", ""), l.get("title", ""),
-            l.get("date", ""), l.get("place", ""), l.get("status", "new"), l.get("url", ""),
+            i, l.get("match_score", 0),
+            _csv_safe(l.get("source_name", "")), _csv_safe(l.get("title", "")),
+            _csv_safe(l.get("date", "")), _csv_safe(l.get("place", "")),
+            _csv_safe(l.get("status", "new")), _csv_safe(l.get("url", "")),
         ])
     return buf.getvalue()
 

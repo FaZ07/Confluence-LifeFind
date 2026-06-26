@@ -15,6 +15,7 @@ import logging
 import secrets
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -27,6 +28,7 @@ import authorities
 import export
 import geo
 import intel
+import narrate
 import places
 import reverse
 import searchmodel
@@ -141,9 +143,11 @@ async def run_search(case_id: str) -> None:
         if center:
             child["lat"], child["lng"], child["place"] = center
         case["geocoded"] = center is not None
-        # Grounded statistical search-radius rings (lost-person-behavior data).
+        # Grounded statistical search-radius rings (lost-person-behavior data),
+        # bounded by how far the subject could have travelled since last seen.
         case["search_model"] = searchmodel.rings(child.get("category", "missing"),
-                                                 child.get("lat"), child.get("lng"))
+                                                 child.get("lat"), child.get("lng"),
+                                                 child.get("last_seen_time"))
         store.save(case)
 
         async def run_channel(channel):
@@ -250,9 +254,18 @@ async def categories():
     return sources.CATEGORIES
 
 
+# How long ago each demo subject was "last seen" — chosen so the time-aware search
+# radius opens mid-expansion (visibly growing, not yet saturated) in every demo.
+_DEMO_AGE_HOURS = {"child": 1.5, "dementia": 3.0, "tourist": 2.0, "disaster": 5.0, "missing": 4.0}
+
+
 @app.get("/api/demo-case")
 async def demo_case(category: str = "child"):
-    return DEMO_CASES.get(category, DEMO_CASES["child"])
+    base = DEMO_CASES.get(category, DEMO_CASES["child"])
+    demo = dict(base)
+    seen = datetime.now() - timedelta(hours=_DEMO_AGE_HOURS.get(demo.get("category", "child"), 2.0))
+    demo["last_seen_time"] = seen.strftime("%Y-%m-%d %H:%M")   # fresh, relative to now
+    return demo
 
 
 @app.post("/api/case/{case_id}/chat")
@@ -263,7 +276,9 @@ async def chat(case_id: str, body: dict):
     message = (body.get("message") or "").strip()[: settings.MAX_FIELD_LEN]
     if not message:
         raise HTTPException(422, "message required")
-    return {"response": intel.chat_response(message, case)}
+    answer = intel.chat_response(message, case)                 # deterministic
+    answer = await narrate.polish(answer, child=case.get("child"))  # optional rephrase (no-op if disabled)
+    return {"response": answer, "narrated": narrate.enabled()}
 
 
 @app.post("/api/case/{case_id}/search-plan")
@@ -375,7 +390,9 @@ async def chat_stateless(body: dict):
     message = (body.get("message") or "").strip()[: settings.MAX_FIELD_LEN]
     if not message:
         raise HTTPException(422, "message required")
-    return {"response": intel.chat_response(message, case)}
+    answer = intel.chat_response(message, case)
+    answer = await narrate.polish(answer, child=case.get("child"))
+    return {"response": answer, "narrated": narrate.enabled()}
 
 
 @app.post("/api/report")
@@ -396,7 +413,7 @@ async def health():
         "status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION,
         "offline": settings.OFFLINE, "geocode": settings.GEOCODE_ENABLED,
         "persist": store.enabled(), "active_cases": len(CASES), "vision": True,
-        "sync": settings.SYNC,
+        "sync": settings.SYNC, "narrate": narrate.enabled(),
         "sources": [c["label"] for c in sources.CHANNELS],
     }
 

@@ -341,6 +341,7 @@
 
   <!-- PAGE 3 · ANALYSIS -->
   <section id="pageAnalysis" class="page hidden">
+   <div class="analysis-stack">
     <div class="fusion-alert hidden" id="fusionAlert">
       <div class="fu-icon">⊕</div>
       <div>
@@ -351,11 +352,11 @@
     </div>
     <div class="cc-bottom">
       <div class="panel">
-        <div class="p-h"><span class="t">Search Priority Zones</span><span class="c">ranked by signal</span></div>
+        <div class="p-h"><span class="t">Search Priority Zones<span class="info" tabindex="0" role="button" aria-label="What are priority zones?">i<span class="tipbox">Places ranked by how much agreeing public signal points to them. A longer bar means <b>more sources, stronger leads, closer together</b> — not a confirmed location. Send a team to zone A first.</span></span></span><span class="c">ranked by signal</span></div>
         <div class="zones" id="zones"></div>
         <div class="reco" id="reco"></div>
         <div class="ai-cmd hidden" id="aiCmd">
-          <div class="ai-cmd-k">PRIORITY RECOMMENDATION</div>
+          <div class="ai-cmd-k">PRIORITY RECOMMENDATION<span class="info" tabindex="0" role="button" aria-label="How is this recommendation made?">i<span class="tipbox">A computed read-out of the top zones, built only from the <b>scored leads</b>. No AI guesswork — every line traces back to the arithmetic on the right.</span></span></div>
           <div id="aiCmdZones"></div>
           <div class="ai-assess" id="aiAssess"></div>
           <div class="ai-action" id="aiAction"></div>
@@ -363,32 +364,33 @@
         </div>
       </div>
       <div class="panel">
-        <div class="p-h"><span class="t">Activity Timeline</span><span class="c">operational log</span></div>
+        <div class="p-h"><span class="t">Activity Timeline<span class="info" tabindex="0" role="button" aria-label="What is the activity timeline?">i<span class="tipbox">The operational log — when the source sweep ran and when each notable lead arrived. This is <b>processing order</b>, not the subject's movements.</span></span></span><span class="c">operational log</span></div>
         <div class="tl" id="timeline"></div>
       </div>
     </div>
     <div class="panel invest hidden" id="investPanel">
-      <div class="p-h"><span class="t">Investigation Support</span><span class="c">deterministic · evidence-grade</span></div>
+      <div class="p-h"><span class="t">Investigation Support<span class="info" tabindex="0" role="button" aria-label="What is investigation support?">i<span class="tipbox">Deterministic cross-checks that turn isolated leads into <b>evidence</b> — corroboration, chronology and clustering, all computed from the leads with no black-box model.</span></span></span><span class="c">deterministic · evidence-grade</span></div>
       <div id="ivContra" class="iv-contra hidden"></div>
       <div class="invest-grid">
         <div class="invest-col">
-          <div class="iv-k">⊕ Cross-source corroboration</div>
+          <div class="iv-k">⊕ Cross-source corroboration<span class="info" tabindex="0" role="button" aria-label="What is cross-source corroboration?">i<span class="tipbox">How many <b>independent sources</b> agree on the same place, clothing item or age inside the time window. More agreement = harder evidence.</span></span></div>
           <div id="ivCorr" class="iv-body"></div>
         </div>
         <div class="invest-col">
-          <div class="iv-k">↪ Report chronology</div>
+          <div class="iv-k">↪ Report chronology<span class="info" tabindex="0" role="button" aria-label="What is report chronology?">i<span class="tipbox">The order locations were <b>reported</b> in, with the distance between them. This is report order — <b>not</b> proof the person physically travelled that path.</span></span></div>
           <div id="ivMove" class="iv-body"></div>
         </div>
         <div class="invest-col">
-          <div class="iv-k">◎ Activity cluster &amp; search area</div>
+          <div class="iv-k">◎ Activity cluster &amp; search area<span class="info" tabindex="0" role="button" aria-label="What is the activity cluster?">i<span class="tipbox">Where the signal concentrates: the weighted <b>centre of activity</b> and the radius covering most of it, drawn on the map as your primary search area.</span></span></div>
           <div id="ivCluster" class="iv-body"></div>
         </div>
       </div>
     </div>
     <div class="panel sr hidden" id="srPanel">
-      <div class="p-h"><span class="t">Statistical search radius</span><span class="c">lost-person-behavior model</span></div>
+      <div class="p-h"><span class="t">Statistical search radius<span class="info" tabindex="0" role="button" aria-label="What is the statistical search radius?">i<span class="tipbox">Empirical distance rings SAR teams use: how far <b>comparable</b> subjects have historically been found from the last-seen point (ISRID data). Representative — <b>calibrate to your region</b> before operational use, not a prediction of this person.</span></span></span><span class="c">lost-person-behavior model</span></div>
       <div class="sr-body" id="srBody"></div>
     </div>
+   </div>
   </section>
 
   <!-- PAGE 4 · HANDOFF -->
@@ -589,19 +591,49 @@ function drawAreas(sa, mv){
   if(mv&&mv.path&&mv.path.length>1)
     L.polyline(mv.path.map(p=>[p.lat,p.lng]),{color:"#FFB84D",weight:2,opacity:.7,dashArray:"6 6"}).addTo(areaLayer);
 }
-// ---- statistical search-radius rings (lost-person-behavior model) ----
+// ---- time-aware statistical search-radius rings (lost-person-behavior model) ----
+function srRingChips(rings){ return rings.map((r,i)=>`<div class="sr-ring r${i}"><b>${r.p}%</b> within <b>${r.km} km</b></div>`).join(""); }
+function srStatusText(sm,hours){
+  if(!sm.time_aware) return "last-seen time unknown — showing full historical area";
+  if(sm.saturated)   return "◉ full historical dispersal reached";
+  return `◴ ${hours}h since last seen — area still expanding`;
+}
 function renderSearchModel(c){
   const sm=c.search_model; if(!sm){ $("srPanel").classList.add("hidden"); return; }
-  $("srPanel").classList.remove("hidden");
-  $("srBody").innerHTML=`<div class="sr-rings">`+sm.rings.map((r,i)=>`<div class="sr-ring r${i}"><b>${r.p}%</b> within <b>${r.km} km</b></div>`).join("")+`</div>`+
+  $("srPanel").classList.remove("hidden"); window._sm=sm;
+  const status=`<span class="sr-time ${sm.time_aware&&!sm.saturated?'':'muted'}">${srStatusText(sm,sm.elapsed_hours)}</span>`;
+  const replay=(sm.time_aware&&!sm.saturated)?`<button class="sr-replay" onclick="animateGrowth()">▶ Replay area growth</button>`:"";
+  $("srBody").innerHTML=
+    `<div class="sr-top">${status}${replay}</div>`+
+    `<div class="sr-rings" id="srRings">${srRingChips(sm.rings)}</div>`+
     `<div class="sr-note">${escHtml(sm.note)}</div>`+
     `<div class="sr-basis">⚠ ${escHtml(sm.basis)}</div>`;
-  drawRings(sm);
+  drawRings(sm.rings, sm);
 }
-function drawRings(sm){
+// animate the search area from the moment last seen out to the current elapsed time
+function animateGrowth(){
+  const sm=window._sm; if(!sm||!sm.time_aware||!sm.elapsed_hours||!map) return;
+  const dur=2200, t0=performance.now(), H=sm.elapsed_hours, full=sm.full_rings, p95=sm.p95_km, sp=sm.speed_kmh, mf=sm.min_factor;
+  const tEl=()=>$("srBody")&&$("srBody").querySelector(".sr-time");
+  const paint=h=>{ const factor=Math.min(1,Math.max(mf, sp*h/p95));
+    const rings=full.map(r=>({p:r.p, km:Math.round(r.km*factor*100)/100}));
+    drawRings(rings, sm); if($("srRings")) $("srRings").innerHTML=srRingChips(rings);
+    const t=tEl(); if(t) t.textContent=srStatusText(sm, Math.round(h*10)/10); };
+  const settle=()=>{ drawRings(sm.rings, sm); if($("srRings")) $("srRings").innerHTML=srRingChips(sm.rings);
+    const t=tEl(); if(t) t.textContent=srStatusText(sm, sm.elapsed_hours); };
+  let raf=0;
+  (function frame(now){ const k=Math.min(1,(now-t0)/dur); paint(k*H); if(k<1) raf=requestAnimationFrame(frame); else settle(); })(t0);
+  // guarantee the final state even if requestAnimationFrame is throttled (background tab)
+  setTimeout(()=>{ if(raf) cancelAnimationFrame(raf); settle(); }, dur+250);
+}
+function drawRings(rings, sm){
   if(!ringLayer||!map) return; ringLayer.clearLayers();
   const cols=["#FFB84D","#62E8FF","#56657f"];
-  sm.rings.forEach((r,i)=>L.circle(sm.center,{radius:r.km*1000,color:cols[i],weight:1.2,opacity:.55,fill:false,dashArray:i?"4 9":"none"}).addTo(ringLayer));
+  // faint "eventual extent" boundary (historical p95) while the area is still expanding
+  if(sm&&sm.time_aware&&!sm.saturated&&sm.full_rings){ const fz=sm.full_rings[sm.full_rings.length-1];
+    L.circle(sm.center,{radius:fz.km*1000,color:"#56657f",weight:1,opacity:.32,fill:false,dashArray:"2 8"}).addTo(ringLayer); }
+  rings.forEach((r,i)=>L.circle(sm.center,{radius:r.km*1000,color:cols[i],weight:1.2,opacity:.55,
+    fill:i===0,fillColor:cols[0],fillOpacity:i===0?.05:0,dashArray:i?"4 9":"none"}).addTo(ringLayer));
 }
 // ---- CCTV / footage-source discovery (OpenStreetMap; not face recognition) ----
 function cctvIcon(){ return L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],html:`<div class="cctvm"></div>`}); }
@@ -871,11 +903,13 @@ function setExportLinks(){ if(!caseId) return;
     if(ds){ ds.onclick=null; ds.href=`/api/case/${caseId}/report`; }
   }
 }
+// neutralise spreadsheet formula injection (= + - @) in the exported CSV — mirrors export._csv_safe
+function csvSafe(x){ const s=(x==null?"":String(x)); return /^[=+\-@\t\r]/.test(s)?"'"+s:s; }
 function downloadCSV(){
   const c=window._lastCase; if(!c) return;
   const rows=[["rank","match_score","source","title","date","place","status","url"]];
   (c.leads||[]).slice().sort((a,b)=>(b.match_score||0)-(a.match_score||0)).forEach((l,i)=>rows.push([i+1,l.match_score,l.source_name,l.title,l.date,l.place,l.status,l.url]));
-  const csv=rows.map(r=>r.map(x=>`"${String(x==null?"":x).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const csv=rows.map(r=>r.map(x=>`"${csvSafe(x).replace(/"/g,'""')}"`).join(",")).join("\n");
   const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
   const a=document.createElement("a"); a.href=url; a.download=`lifefind-${caseId}.csv`; a.click(); URL.revokeObjectURL(url);
 }
@@ -1061,11 +1095,39 @@ async function refresh(){
   .auth-note{ font-size:10px; color:var(--faint); line-height:1.5; margin-top:11px;
     padding-top:10px; border-top:1px solid var(--line); }
 
+  /* ---- Plain-language info tooltips ("what is this?") ---- */
+  .info{ display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:8px;
+    border-radius:50%; border:1px solid var(--line-2); color:var(--faint); font-family:var(--mono); font-size:9.5px;
+    font-style:normal; font-weight:600; cursor:help; position:relative; flex:none; vertical-align:middle; transition:.15s; }
+  .info:hover, .info:focus-visible{ color:var(--amber); border-color:var(--amber); outline:none; }
+  .info .tipbox{ position:absolute; top:calc(100% + 9px); left:0; width:236px; padding:11px 13px; border-radius:10px;
+    background:var(--raise); border:1px solid var(--line-2); box-shadow:0 22px 50px -16px #000;
+    font-family:var(--body); font-size:11px; font-weight:400; line-height:1.55; letter-spacing:.1px; text-transform:none;
+    color:var(--muted); text-align:left; opacity:0; visibility:hidden; transform:translateY(-5px);
+    transition:.16s; z-index:80; pointer-events:none; white-space:normal; }
+  .info .tipbox b{ color:var(--ink); font-weight:600; }
+  .info:hover .tipbox, .info:focus-within .tipbox{ opacity:1; visibility:visible; transform:none; }
+  .info .tipbox::before{ content:""; position:absolute; bottom:100%; left:10px; border:6px solid transparent; border-bottom-color:var(--line-2); }
+  /* mobile: an icon-anchored box can't fit beside a mid-header icon without clipping,
+     so pin it to the viewport as a bottom sheet (revealed by tap-focus) */
+  @media (max-width:720px){
+    .info .tipbox{ position:fixed; left:12px; right:12px; top:auto; bottom:14px; width:auto;
+      transform:translateY(6px); font-size:12px; padding:13px 15px; }
+    .info:hover .tipbox, .info:focus-within .tipbox{ transform:translateY(0); }
+    .info .tipbox::before{ display:none; }
+  }
+
+  /* ---- Analysis page: breathing room between every section ---- */
+  .analysis-stack{ display:flex; flex-direction:column; gap:20px; }
+  .analysis-stack .cc-bottom,
+  .analysis-stack .invest,
+  .analysis-stack .sr{ margin-top:0; }       /* spacing now owned by the stack gap */
+  .analysis-stack .fusion-alert{ margin:0; } /* was margin:10px 12px 0 */
+
   /* ---- Investigation Support ---- */
   .invest{ margin-top:14px; }
-  .invest-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; }
-  .invest-col{ padding:14px 16px; border-left:1px solid var(--line); }
-  .invest-col:first-child{ border-left:none; }
+  .invest-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(248px,1fr)); gap:14px; padding:16px; }
+  .invest-col{ padding:15px 16px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2); }
   .iv-k{ font-family:var(--mono); font-size:10px; letter-spacing:1.2px; text-transform:uppercase;
     color:var(--muted); margin-bottom:11px; }
   .iv-body{ font-size:12px; color:var(--ink); line-height:1.55; }
@@ -1085,8 +1147,7 @@ async function refresh(){
     border:1px solid rgba(255,91,91,.4); border-radius:5px; padding:2px 6px; margin-right:8px; }
   .hub{ width:12px; height:12px; border:2px solid var(--green); background:rgba(70,224,160,.25);
     border-radius:3px; box-shadow:0 0 8px rgba(70,224,160,.5); }
-  @media (max-width:1180px){ .invest-grid{ grid-template-columns:1fr; }
-    .invest-col{ border-left:none; border-top:1px solid var(--line); } .invest-col:first-child{ border-top:none; } }
+  /* invest-grid wraps on its own via auto-fit; no per-breakpoint override needed */
 
   /* ---- Photo color detection ---- */
   .vision-field input[type="file"]{ font-size:11px; color:var(--muted); padding:9px 12px; cursor:pointer; }
@@ -1138,6 +1199,12 @@ async function refresh(){
   /* ---- Statistical search radius ---- */
   .sr{ margin-top:14px; }
   .sr-body{ padding:14px 16px 16px; }
+  .sr-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:13px; }
+  .sr-time{ font-family:var(--mono); font-size:10.5px; letter-spacing:.4px; color:var(--amber); }
+  .sr-time.muted{ color:var(--faint); }
+  .sr-replay{ font-family:var(--mono); font-size:10px; letter-spacing:.8px; text-transform:uppercase; cursor:pointer;
+    color:var(--cyan); background:rgba(98,232,255,.07); border:1px solid rgba(98,232,255,.25); border-radius:7px; padding:6px 11px; transition:.15s; }
+  .sr-replay:hover{ background:rgba(98,232,255,.14); border-color:rgba(98,232,255,.5); }
   .sr-rings{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:11px; }
   .sr-ring{ font-size:12.5px; color:var(--ink); padding:8px 13px; border-radius:9px; background:var(--panel-2); border:1px solid var(--line-2); }
   .sr-ring b{ font-family:var(--mono); }

@@ -32,6 +32,25 @@ def test_csv_ranks_by_score():
     assert rows[1].startswith("1,88")            # top lead first
 
 
+def test_csv_neutralises_formula_injection():
+    """A scraped lead title/place starting with = + - @ must not execute as a
+    spreadsheet formula when authorities open the CSV — it gets an apostrophe prefix."""
+    case = _case()
+    case["leads"] = [
+        {"match_score": 90, "source_name": "@evil", "title": "=cmd|'/c calc'!A1",
+         "date": "2026-06-20", "place": "+44-bad", "status": "new", "url": "http://x/1"},
+    ]
+    csv = export.leads_csv(case)
+    assert "'=cmd" in csv and "'@evil" in csv and "'+44-bad" in csv
+    assert "\n=cmd" not in csv                     # never a raw leading '='
+
+
+def test_csv_leaves_normal_values_untouched():
+    csv = export.leads_csv(_case())
+    assert "'The Hindu" not in csv                 # benign cells get no apostrophe
+    assert "The Hindu" in csv
+
+
 def test_case_report_html_is_well_formed():
     html = export.case_report_html(_case())
     assert "<html" in html and "MISSING" in html

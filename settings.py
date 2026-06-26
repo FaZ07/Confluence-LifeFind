@@ -62,6 +62,17 @@ CASE_TTL_DAYS = _i("LIFELINE_CASE_TTL_DAYS", 30)
 MAX_ACTIVE_CASES = _i("LIFELINE_MAX_ACTIVE_CASES", 200)   # in-memory cap; older fall back to store
 GEOCODE_CACHE_MAX = _i("LIFELINE_GEOCODE_CACHE_MAX", 5000)
 
+# --- optional LLM narration (OFF unless GROQ_API_KEY is set) -----------
+# A cosmetic layer that only rephrases the deterministic engine's already-computed
+# answers into clearer prose. It never changes a zone, score or decision, redacts
+# the subject's identity before any call, and falls back to the deterministic text
+# on any error. With no key, nothing here runs — the engine is fully self-contained.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_BASE = os.getenv("GROQ_BASE", "https://api.groq.com/openai/v1/chat/completions")
+NARRATE_TIMEOUT = _f("LIFELINE_NARRATE_TIMEOUT", 6.0)
+NARRATE = _b("LIFELINE_NARRATE", True) and bool(GROQ_API_KEY)   # on only when a key exists
+
 # --- API hardening -----------------------------------------------------
 RATE_LIMIT_PER_MIN = _i("LIFELINE_RATE_LIMIT_PER_MIN", 20)    # /api/search per client per minute
 MAX_FIELD_LEN = _i("LIFELINE_MAX_FIELD_LEN", 200)

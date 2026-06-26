@@ -23,7 +23,7 @@ Groq LLM ripped out, then hardened into something that actually ships.
 | Persistence | in-memory only | SQLite — cases survive restarts, **shareable by link** |
 | Handoff | — | official channels + CSV / printable case report |
 | API keys | `WIRE_API_KEY` + `GROQ_API_KEY` | **none** |
-| Hardening | — | retries · rate-limit · validation · logging · 69 tests |
+| Hardening | — | retries · rate-limit · validation · logging · 81 tests |
 
 ---
 
@@ -40,7 +40,7 @@ No `.env`, no signup, nothing to configure.
 
 ```bash
 LIFELINE_OFFLINE=1 python -m uvicorn app:app   # force the offline demo set (CI / no-wifi stage)
-pytest -q                                        # 69 tests over the whole engine
+pytest -q                                        # 81 tests over the whole engine
 ```
 
 ---
@@ -85,6 +85,16 @@ chat (quotes the actual evidence) · tactical search plan — every output compu
 from the scored leads. A judge can ask *"why this zone?"* and you point at the
 arithmetic.
 
+### Optional narration (`narrate.py`) — off by default
+
+The engine decides everything — zones, scores, the assessment — deterministically,
+**with or without an LLM**. If (and only if) you set a `GROQ_API_KEY`, the commander's
+*chat replies* get rephrased into clearer prose. It is deliberately fenced in: it never
+adds a fact or changes a number/decision, it **redacts the subject's identity before any
+call** (no name, photo or address leaves the box), and it falls back to the deterministic
+text on any error or when no key is set. No key → nothing here runs. The keyless,
+auditable core stays the headline.
+
 ## Investigation support (`analysis.py`)
 
 Turns isolated clues into evidence — all deterministic, no ML:
@@ -116,12 +126,17 @@ and the kind of overclaim that discredits a serious system, so it is deliberatel
 
 Two grounded aids for the people actually searching:
 
-- **Statistical search radius (`searchmodel.py`)** — the empirical distance rings
-  SAR teams use: given the point last seen and the subject category, the radii
+- **Time-aware statistical search radius (`searchmodel.py`)** — the empirical distance
+  rings SAR teams use: given the point last seen and the subject category, the radii
   within which 50 / 75 / 95 % of comparable subjects have *historically* been found
-  (published lost-person-behavior / ISRID data). Drawn on the map. It is **not** a
-  prediction of the individual and **not** an AI guess — the figures are
-  representative and must be calibrated to your region before operational use.
+  (published lost-person-behavior / ISRID data). **They now grow with time:** a person
+  can't be farther than they could have travelled, so the area starts tight right after
+  the disappearance and expands — bounded by an effective mobility horizon — until it
+  saturates at the full historical distribution. The map shows the current area, the
+  faint outer ring is where it will eventually reach, and **▶ Replay area growth**
+  animates the whole expansion from t=0 to now. Still deterministic (same case + same
+  elapsed time → same radii), **not** a prediction of the individual, and the speeds
+  and radii are representative — calibrate to your region before operational use.
 - **CCTV / footage-source discovery (`places.py`)** — the petrol bunks, ATMs,
   stations, banks and shops that commonly run CCTV within walking distance of the
   last-seen point (OpenStreetMap, free, no key). **Not** face recognition and
@@ -151,9 +166,10 @@ hard-fails). All config is env-driven (`settings.py`).
 | `sources.py` | Four free public sources + retry/fallback |
 | `geo.py` | Global geocoding (OSM) + offline gazetteer |
 | `intel.py` | Deterministic fusion, zones, timeline, chat, plan |
+| `narrate.py` | Optional LLM narration — off without a key; never alters decisions |
 | `analysis.py` | Corroboration, movement, clustering, search area, contradictions |
 | `vision.py` | Dominant clothing-color extraction from a photo (colors only) |
-| `searchmodel.py` | Statistical search-radius rings (lost-person-behavior) |
+| `searchmodel.py` | Time-aware statistical search-radius rings (lost-person-behavior) |
 | `places.py` | CCTV / footage-source discovery (OpenStreetMap) |
 | `reverse.py` | Reverse search: sighting → match open cases |
 | `scoring.py` | Deterministic, explainable scoring + de-dup + noise filter |
@@ -163,7 +179,7 @@ hard-fails). All config is env-driven (`settings.py`).
 | `settings.py` | Env-driven configuration |
 | `static/index.html` | 4-page command center UI — no build step |
 | `static/family.html` | Calm, read-only family view |
-| `tests/` | 69 pytest cases (unit + API) |
+| `tests/` | 81 pytest cases (unit + API) |
 
 ### Deploying
 LifeFind runs a long-lived process (live streaming + SQLite persistence), so deploy it
