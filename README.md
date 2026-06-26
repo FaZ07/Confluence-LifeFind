@@ -69,17 +69,6 @@ Every step below runs today, locally and on the live URL:
 
 ---
 
-## 🏅 How this maps to the judging criteria
-
-| Criterion | Where to look | Evidence |
-|---|---|---|
-| **Core Prototype Functionality** | The 8-step flow above, live | Full path works end to end on the live URL; **90 automated tests** pass; a case can never wedge (every search reaches a valid terminal state). |
-| **Technical Foundation** | `app.py`, `intel.py`, `audit.py`, `graph.py` | Async FastAPI fan-out across 4 real sources; a **fully deterministic** intelligence engine (same input → same output, auditable); a **hash-chained audit log**; **zero API keys / zero infra** to run; SQLite persistence; ruff-clean; CI on every push. |
-| **Problem-Solution Alignment** | Intake → Handoff, `authorities.py`, `family.html` | It is *literally* the bridge: a family reports, the engine corroborates **public** signal, and it hands a ranked, sourced package to the authorities — with a separate calm family view. Honest by design (public signal only; **not** face recognition). |
-| **UX & Usability** | The whole UI (`static/index.html`) | A clean dashboard with a guided, sequential nav; **city autocomplete** so locations resolve correctly worldwide; tooltips on every action; the cinematic loader makes the AI **understandable in 5 seconds**; keyboard-focusable, responsive. |
-| **Progress & Demo Clarity** | Demo script below | The reasoning stream narrates exactly what's happening; the **"Why" panel** and **audit trail** let a judge interrogate any conclusion; a tight 2-minute script lands the wow + the substance. |
-
----
 
 ## 🧱 Tech stack
 
@@ -159,26 +148,10 @@ docker build -t lifefind . && docker run -p 8000:8000 -v lifefind-data:/data lif
 > sample (great on stage); *Live* hits the real public sources for **any city you type**. For real
 > results, flip it to **Live**.
 
----
-
-## 🎬 2-minute demo script (for the pitch)
-
-1. **(0:00)** "Someone's child is missing in Jaipur." Type *Jaipur* → **pick it from the live
-   autocomplete** → Start case.
-2. **(0:15)** Let the **AI reasoning loader** play — narrate: *"it's not a black box; it's showing
-   you exactly how it reasons."*
-3. **(0:40)** Land on the **map** — priority zone + growing search radius.
-4. **(1:00)** **Intelligence** → click the brightest node in the **entity graph** → the **"Why"
-   panel**: *"this place was corroborated by 3 independent sources."* Open **Schema** to show the
-   ontology.
-5. **(1:25)** **Triage** → **Verify** a lead → watch its node turn green on the graph **live** →
-   open the **audit trail**: *"chain verified — every action is tamper-evident."*
-6. **(1:50)** **Handoff** → "one click and the official has Police 100, a shareable link, and a
-   printable case report." **The bridge is complete.**
 
 ---
 
-## 🛡️ Design principles & ethics (why it's defensible)
+## 🛡️ Design principles & ethics 
 
 - **Deterministic, not a guess.** Zones, scores and links are arithmetic on public data —
   reproducible and explainable. The optional LLM only rephrases; it never decides.
