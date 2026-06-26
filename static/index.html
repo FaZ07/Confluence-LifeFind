@@ -371,6 +371,63 @@
   .ks-rel-ex{ font-size:11px; color:var(--ink); margin-top:7px; padding:8px 11px; background:rgba(37,99,235,.06); border:1px solid rgba(37,99,235,.16); border-radius:9px; line-height:1.5; }
   .ks-rel-ex b{ color:var(--primary); }
 
+  /* ===== living graph: animated build + alive ===== */
+  .kg-nodes .gn{ transform-box:fill-box; transform-origin:center; }
+  .kg-svg.building .kg-nodes .gn{ animation:gnIn .55s cubic-bezier(.2,.9,.3,1.2) both; }
+  @keyframes gnIn{ from{ opacity:0; transform:scale(.1); } 70%{ transform:scale(1.12); } to{ opacity:1; transform:scale(1); } }
+  .kg-svg.building .ge{ stroke-dasharray:var(--len,200); stroke-dashoffset:var(--len,200); animation:geDraw .7s ease forwards; }
+  @keyframes geDraw{ to{ stroke-dashoffset:0; } }
+  .ge{ animation:geBreath 3.4s ease-in-out infinite; }
+  @keyframes geBreath{ 50%{ opacity:.55; } }
+  .gn.central .glow{ animation:glowPulse 2s ease-in-out infinite; }
+  @keyframes glowPulse{ 0%,100%{ opacity:.5; transform-box:fill-box; transform-origin:center; transform:scale(1); } 50%{ opacity:1; transform:scale(1.18); } }
+
+  /* ===== AI reasoning overlay (cinematic search) ===== */
+  .reason-ov{ position:fixed; inset:0; z-index:5000; display:flex; align-items:center; justify-content:center; }
+  .reason-ov.hidden{ display:none; }
+  .reason-ov.closing{ animation:reasonOut .6s forwards; }
+  @keyframes reasonOut{ to{ opacity:0; visibility:hidden; transform:scale(1.03); } }
+  .reason-bg{ position:absolute; inset:0; overflow:hidden;
+    background:radial-gradient(900px 620px at 50% 36%, rgba(37,99,235,.20), transparent 60%),
+      radial-gradient(700px 520px at 82% 82%, rgba(6,182,212,.13), transparent 60%),
+      radial-gradient(640px 520px at 12% 90%, rgba(124,58,237,.14), transparent 60%), #070B14; }
+  .reason-bg::after{ content:""; position:absolute; inset:-40px; background-image:
+      linear-gradient(rgba(96,165,250,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,.09) 1px,transparent 1px);
+    background-size:46px 46px; -webkit-mask:radial-gradient(circle at 50% 40%, #000, transparent 72%);
+    mask:radial-gradient(circle at 50% 40%, #000, transparent 72%); animation:gridDrift 16s linear infinite; }
+  @keyframes gridDrift{ to{ transform:translate(46px,46px); } }
+  .reason-stage{ position:relative; z-index:1; width:min(560px,92vw); text-align:center; color:#E7ECF3; padding:20px; }
+  .reason-skip{ position:absolute; top:-4px; right:0; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15);
+    color:#9fb0c8; font-size:11px; padding:6px 12px; border-radius:8px; cursor:pointer; font-family:var(--mono); letter-spacing:.5px; }
+  .reason-skip:hover{ color:#fff; background:rgba(255,255,255,.12); }
+  .reason-core{ position:relative; width:130px; height:130px; margin:0 auto 24px; display:flex; align-items:center; justify-content:center; }
+  .rc-ring{ position:absolute; border-radius:50%; border:1.5px solid rgba(96,165,250,.5); }
+  .rc-ring.r1{ inset:0; animation:rcpulse 2.4s ease-out infinite; }
+  .rc-ring.r2{ inset:16px; border-color:rgba(96,165,250,.35); animation:rcpulse 2.4s ease-out infinite .5s; }
+  .rc-ring.r3{ inset:32px; border-color:rgba(34,211,238,.32); animation:rcpulse 2.4s ease-out infinite 1s; }
+  @keyframes rcpulse{ 0%{ transform:scale(.65); opacity:0; } 35%{ opacity:1; } 100%{ transform:scale(1.28); opacity:0; } }
+  .rc-sweep{ position:absolute; inset:8px; border-radius:50%;
+    background:conic-gradient(from 0deg, transparent 0deg, rgba(96,165,250,.55) 38deg, transparent 78deg); animation:rcspin 1.5s linear infinite; }
+  @keyframes rcspin{ to{ transform:rotate(360deg); } }
+  .rc-eye{ position:relative; z-index:2; width:58px; height:58px; border-radius:50%;
+    background:linear-gradient(135deg,#2563EB,#06B6D4); display:flex; align-items:center; justify-content:center;
+    font-size:25px; color:#fff; box-shadow:0 0 34px rgba(37,99,235,.75); animation:rcbob 2.4s ease-in-out infinite; }
+  @keyframes rcbob{ 50%{ transform:scale(1.08); } }
+  .reason-title{ font-family:var(--display); font-weight:700; font-size:24px; letter-spacing:-.3px; }
+  .reason-sub{ color:#9fb0c8; font-size:13px; margin-top:5px; }
+  .reason-meters{ display:flex; justify-content:center; gap:9px; margin:20px 0 14px; flex-wrap:wrap; }
+  .rm{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:11px; padding:9px 13px; min-width:76px; }
+  .rm-v{ font-family:var(--mono); font-size:19px; font-weight:600; color:#fff; font-variant-numeric:tabular-nums; }
+  .rm-k{ font-size:9px; letter-spacing:1.1px; text-transform:uppercase; color:#7d8ba3; margin-top:2px; }
+  .reason-stream{ text-align:left; min-height:148px; max-width:438px; margin:0 auto; }
+  .rs-line{ display:flex; align-items:flex-start; gap:10px; font-size:12.5px; color:#c7d2e0; padding:5px 0; line-height:1.45;
+    opacity:0; transform:translateX(-8px); animation:rsIn .42s forwards; }
+  @keyframes rsIn{ to{ opacity:1; transform:none; } }
+  .rs-line .rs-ic{ width:16px; flex:none; color:#22D3EE; text-align:center; }
+  .rs-line b{ color:#fff; font-weight:600; }
+  .reason-prog{ height:4px; border-radius:4px; background:rgba(255,255,255,.1); overflow:hidden; margin-top:16px; }
+  .reason-prog i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#2563EB,#22D3EE); border-radius:4px; transition:width .5s ease; }
+
   /* ================= GLASS PANEL PRIMITIVE ================= */
   .panel{ background:var(--card); backdrop-filter:blur(20px) saturate(150%); border:1px solid var(--glass-border);
     border-radius:var(--r); box-shadow:var(--shadow); }
@@ -1387,6 +1444,24 @@
   </div>
 </div>
 
+<!-- ============ AI REASONING OVERLAY (cinematic search) ============ -->
+<div id="reasoningOverlay" class="reason-ov hidden" aria-hidden="true">
+  <div class="reason-bg"></div>
+  <div class="reason-stage">
+    <button class="reason-skip" onclick="finishReasoning(true)">Skip ▸</button>
+    <div class="reason-core">
+      <span class="rc-ring r1"></span><span class="rc-ring r2"></span><span class="rc-ring r3"></span>
+      <span class="rc-sweep"></span>
+      <span class="rc-eye">◈</span>
+    </div>
+    <div class="reason-title">LifeFind AI is investigating</div>
+    <div class="reason-sub" id="reasonSubject">—</div>
+    <div class="reason-meters" id="reasonMeters"></div>
+    <div class="reason-stream" id="reasonStream"></div>
+    <div class="reason-prog"><i id="reasonBar"></i></div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
@@ -1416,6 +1491,7 @@ function showPage(p){
   if(p==="map"&&map) setTimeout(()=>{ map.invalidateSize();
     if(window._lastCase) updateMap(window._lastCase.leads, window._lastCase.child); },60);
   if(p==="triage") loadAudit();
+  if(p==="analysis" && window._lastCase && window._lastCase.graph) renderGraph(window._lastCase.graph);  // replay the graph build
   window.scrollTo(0,0);
 }
 function intakeSeg(s){
@@ -1504,12 +1580,75 @@ async function submitSighting(){
   }catch(e){ $("sightingResults").innerHTML='<div class="iv-empty">Lookup failed — try again.</div>'; }
 }
 
+// ====================================================================
+//  CINEMATIC AI-REASONING LOADER — judges watch the AI think, live.
+//  Each line is gated on a REAL pipeline milestone; the cadence is paced
+//  so it reads as reasoning even when the data arrives in a burst.
+// ====================================================================
+const REASON_STEPS=[
+  {id:"geo", ic:"◎", cond:c=>c.geocoded||(c.child&&c.child.lat!=null),
+    txt:c=>`Pinpointed the last-seen location — <b>${escHtml((c.child&&c.child.place)||(c.child&&c.child.last_seen_location)||"resolving…")}</b>`},
+  {id:"fan", ic:"⇶", cond:c=>(c.diagnostics||[]).length>0||c.sources_searched>0,
+    txt:c=>`Fanning out across <b>${SOURCES.length||4} public sources</b> in parallel`},
+  {id:"chan", ic:"✓", cond:c=>(c.diagnostics||[]).length>=1,
+    txt:c=>{const d=(c.diagnostics||[]);return `Channels returning — <b>${d.length} swept</b>, ${d.reduce((a,x)=>a+(x.leads||0),0)} raw hits`;}},
+  {id:"score", ic:"⚖", cond:c=>(c.leads||[]).length>0,
+    txt:c=>`Scoring <b>${(c.leads||[]).length} signals</b> for relevance · de-duplicating noise`},
+  {id:"fuse", ic:"⊕", cond:c=>!!(((c.intelligence||{}).fusion||{}).top),
+    txt:c=>{const t=((c.intelligence||{}).fusion||{}).top;return `Cross-source fusion — <b>${t.source_count} independent sources</b> converge on <b>${escHtml(t.location)}</b>`;}},
+  {id:"graph", ic:"⛓", cond:c=>c.graph&&(c.graph.nodes||[]).length>2,
+    txt:c=>`Building the entity network — <b>${(c.graph.nodes||[]).length} objects</b> · ${(c.graph.edges||[]).length} links`},
+  {id:"zones", ic:"⚑", cond:c=>!!(((c.intelligence||{}).commander||{}).priority_zones||[]).length,
+    txt:c=>{const z=((c.intelligence||{}).commander||{}).priority_zones||[];return `Ranking priority zones — top: <b>${escHtml(((z[0]||{}).zone||"—").split(",")[0])}</b>`;}},
+  {id:"done", ic:"★", cond:c=>c.done&&c.intelligence, txt:c=>`Assessment ready — handing you the investigation`},
+];
+let _reasonReady, _reasonShown, _reasonTick, _reasonComplete;
+function startReasoning(child){
+  const ov=$("reasoningOverlay"); if(!ov) return;
+  _reasonReady=new Set(); _reasonShown=new Set(); _reasonComplete=false;
+  $("reasonStream").innerHTML=""; $("reasonBar").style.width="0%";
+  $("reasonSubject").textContent=(child.name?child.name+" · ":"")+(child.last_seen_location||"unknown location");
+  $("reasonMeters").innerHTML=[["rmSrc","0","Sources"],["rmSig","0","Signals"],["rmLoc","0","Locations"],["rmZone","—","Top zone"]]
+    .map(([id,v,k])=>`<div class="rm"><div class="rm-v" id="${id}">${v}</div><div class="rm-k">${k}</div></div>`).join("");
+  ov.classList.remove("hidden","closing"); ov.setAttribute("aria-hidden","false");
+  clearInterval(_reasonTick); _reasonTick=setInterval(reasonTick,440);
+}
+function renderReasoning(c){
+  const ov=$("reasoningOverlay"); if(!c||!ov||ov.classList.contains("hidden")) return;
+  REASON_STEPS.forEach(s=>{ try{ if(s.cond(c)) _reasonReady.add(s.id); }catch(e){} });
+  if(c.done&&c.intelligence) _reasonComplete=true;
+  const sig=(c.leads||[]).length, locs=new Set((c.leads||[]).map(l=>l.place).filter(Boolean)).size;
+  const tz=(((c.intelligence||{}).commander||{}).priority_zones||[])[0];
+  setTxt("rmSrc",(c.sources_searched||0)); setTxt("rmSig",sig); setTxt("rmLoc",locs);
+  setTxt("rmZone",tz?((tz.zone||"—").split(",")[0]):"—");
+}
+function setTxt(id,v){ const e=$(id); if(e) e.textContent=v; }
+function reasonTick(){
+  const c=window._lastCase||{};
+  const next=REASON_STEPS.find(s=>_reasonReady.has(s.id)&&!_reasonShown.has(s.id));
+  if(next){ _reasonShown.add(next.id);
+    const line=document.createElement("div"); line.className="rs-line";
+    let t=""; try{ t=next.txt(c); }catch(e){ t=next.id; }
+    line.innerHTML=`<span class="rs-ic">${next.ic}</span><span>${t}</span>`;
+    $("reasonStream").appendChild(line);
+    $("reasonBar").style.width=Math.round(100*_reasonShown.size/REASON_STEPS.length)+"%";
+  }
+  if(_reasonComplete && _reasonShown.size>=REASON_STEPS.length){ clearInterval(_reasonTick); setTimeout(()=>finishReasoning(),650); }
+}
+function finishReasoning(skip){
+  clearInterval(_reasonTick);
+  const ov=$("reasoningOverlay"); if(!ov||ov.classList.contains("hidden")) return;
+  const reveal=()=>{ ov.classList.add("hidden"); ov.classList.remove("closing"); ov.setAttribute("aria-hidden","true");
+    showPage("map"); if(map) setTimeout(()=>{ map.invalidateSize(); if(window._lastCase) updateMap(window._lastCase.leads,window._lastCase.child); },70); };
+  if(skip){ reveal(); } else { ov.classList.add("closing"); setTimeout(reveal,560); }
+}
+
 $("launch").onclick=async()=>{
   const child={category:activeCat}; FIELDS.forEach(f=>child[f]=f==="last_seen_time"?fromDateTimePickerValue($(f).value):$(f).value);
   child.live=useLive;   // Demo (bundled) vs Live (real public sources) for this search
   const resp=await (await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(child)})).json();
   caseId=resp.case_id||resp.id; _authLoaded=false; setExportLinks();
-  unlockNav(); populateNavUser(child); showPage("overview");
+  unlockNav(); populateNavUser(child); startReasoning(child);   // cinematic loader takes the stage
   $("sysDot").classList.add("scan"); $("sysState").textContent="Scanning";
   dispCount=0; initMap(); setTimeout(()=>map&&map.invalidateSize(),60);
   if(resp.done!==undefined){ window._syncCase=resp; refresh(); }   // serverless: full case in one shot
@@ -1690,13 +1829,15 @@ function renderGraph(g){
   panel.classList.remove("hidden");
   const W=920,H=580, pos=kgLayout(g,W,H), byId={}; g.nodes.forEach(n=>byId[n.id]=n);
   window._kg=g; const nstat=kgNodeStatus(g);   // live triage state per node (verified / escalated)
-  let e=""; g.edges.forEach(ed=>{ const a=pos[ed.source], b=pos[ed.target]; if(!a||!b) return;
-    e+=`<line class="ge" data-s="${escHtml(ed.source)}" data-t="${escHtml(ed.target)}" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke-width="${Math.max(.6,Math.min(3,ed.weight/45)).toFixed(2)}"/>`; });
-  let nd=""; g.nodes.forEach(n=>{ const p=pos[n.id]; if(!p) return; const r=kgNodeR(n);
+  let e=""; g.edges.forEach((ed,ei)=>{ const a=pos[ed.source], b=pos[ed.target]; if(!a||!b) return;
+    const len=Math.hypot(b.x-a.x,b.y-a.y).toFixed(0);
+    e+=`<line class="ge" data-s="${escHtml(ed.source)}" data-t="${escHtml(ed.target)}" style="--len:${len};animation-delay:${(ei*0.04).toFixed(2)}s" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke-width="${Math.max(.6,Math.min(3,ed.weight/45)).toFixed(2)}"/>`; });
+  let nd=""; g.nodes.forEach((n,ni)=>{ const p=pos[n.id]; if(!p) return; const r=kgNodeR(n);
     const central=g.central&&g.central.id===n.id, lbl=n.label||"", disp=lbl.length>15?lbl.slice(0,14)+"…":lbl;
     const stt=nstat[n.id]||{};
-    nd+=`<g class="gn ${central?'central':''} ${stt.v?'verified':''} ${stt.e?'escalated':''}" data-id="${escHtml(n.id)}" tabindex="0">${central?`<circle class="glow" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+8).toFixed(1)}"/>`:""}<circle class="ering" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+5).toFixed(1)}"/><circle class="vring" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+5).toFixed(1)}"/><circle class="dot type-${n.type}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r.toFixed(1)}"/><text class="glabel" x="${p.x.toFixed(1)}" y="${(p.y+r+13).toFixed(1)}">${escHtml(disp)}</text></g>`; });
+    nd+=`<g class="gn ${central?'central':''} ${stt.v?'verified':''} ${stt.e?'escalated':''}" data-id="${escHtml(n.id)}" tabindex="0" style="animation-delay:${(ni*0.05).toFixed(2)}s">${central?`<circle class="glow" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+8).toFixed(1)}"/>`:""}<circle class="ering" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+5).toFixed(1)}"/><circle class="vring" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(r+5).toFixed(1)}"/><circle class="dot type-${n.type}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r.toFixed(1)}"/><text class="glabel" x="${p.x.toFixed(1)}" y="${(p.y+r+13).toFixed(1)}">${escHtml(disp)}</text></g>`; });
   $("graphSvg").innerHTML=`<svg viewBox="0 0 ${W} ${H}" id="kgSvg" role="img" aria-label="Entity relationship network"><g class="kg-edges">${e}</g><g class="kg-nodes">${nd}</g></svg>`;
+  const gsv=$("graphSvg"); gsv.classList.add("building"); clearTimeout(window._kgBuildT); window._kgBuildT=setTimeout(()=>gsv.classList.remove("building"),1500);
   const gc=$("graphCentral");
   if(g.central){ gc.classList.remove("empty"); gc.innerHTML=`◈ Most corroborated: <b>${escHtml(g.central.label)}</b> — ${g.central.sources} independent source${g.central.sources>1?'s':''} converge here`; }
   else gc.classList.add("empty");
@@ -2074,7 +2215,7 @@ async function loadAudit(){ if(!caseId) return;
 function auditText(e){ const d=e.detail||{};
   if(e.action==="lead_status") return `<b>${escHtml(d.to)}</b> lead — ${escHtml(d.source||"")}${d.place?" · "+escHtml(d.place):""}`;
   if(e.action==="cctv_source") return `CCTV <b>${escHtml(d.status||"")}</b> — ${escHtml(d.source||"")} (${escHtml(String(d.dist_m||"?"))}m)`;
-  if(e.action==="entity_merge") return `merged entity — <b>${escHtml(d.a||"")}</b> ≈ ${escHtml(d.b||"")}`;
+  if(e.action==="entity_merge") return `fused entity — <b>${escHtml(d.merged||d.b||"")}</b> → ${escHtml(d.kept||d.a||"")}`;
   if(e.action==="entity_ignore") return `kept separate — ${escHtml(d.a||"")} / ${escHtml(d.b||"")}`;
   return `<b>${escHtml(e.action)}</b>`;
 }
@@ -2106,10 +2247,37 @@ function renderCandidates(c){
     :'<div class="tq-empty">No duplicate entities detected — the referenced locations are distinct.</div>';
   window._candCache=cand;
 }
-function resolveEntity(i,act){ const x=(window._candCache||[])[i]; if(!x) return;
+// fold place node `b` into `a`: redirect edges, sum weights, drop the duplicate, dedup edges
+function mergePlaceNodes(g,a,b){
+  const idA="place:"+a, idB="place:"+b;
+  const na=g.nodes.find(n=>n.id===idA), nb=g.nodes.find(n=>n.id===idB);
+  if(na&&nb){ na.sources=(na.sources||0)+(nb.sources||0); na.leads=(na.leads||0)+(nb.leads||0);
+    na.weight=(na.weight||0)+(nb.weight||0); na.centrality=Math.min(1,(na.centrality||0)+(nb.centrality||0)); }
+  g.nodes=g.nodes.filter(n=>n.id!==idB);
+  g.edges.forEach(e=>{ if(e.source===idB)e.source=idA; if(e.target===idB)e.target=idA; });
+  const seen={}, merged=[];
+  g.edges.forEach(e=>{ if(e.source===e.target) return; const k=e.source+">"+e.target+">"+e.rel;
+    if(seen[k]){ seen[k].weight+=e.weight; } else { seen[k]=e; merged.push(e); } });
+  g.edges=merged;
+}
+function resolveEntity(i,act){
+  const x=(window._candCache||[])[i]; if(!x) return;
   _entityResolved[x.a+"|"+x.b]=act;
-  postAudit(act==="merge"?"entity_merge":"entity_ignore",{a:x.a,b:x.b,sim:Math.round(x.sim*100)});
-  if(window._lastCase) renderCandidates(window._lastCase);
+  const c=window._lastCase;
+  if(act==="merge" && c){
+    // canonical = the more-corroborated label; the other folds into it
+    const na=(c.leads||[]).filter(l=>l.place===x.a).length, nb=(c.leads||[]).filter(l=>l.place===x.b).length;
+    const keep=na>=nb?x.a:x.b, drop=na>=nb?x.b:x.a;
+    (c.leads||[]).forEach(l=>{ if(l.place===drop) l.place=keep; });
+    if(c.graph) mergePlaceNodes(c.graph, keep, drop);
+    postAudit("entity_merge",{kept:keep,merged:drop,sim:Math.round(x.sim*100)});
+    // one resolved entity → recompute every downstream view from the fused leads, live
+    renderGraph(c.graph);
+    const zones=buildZones(c.leads); renderZones(zones); renderTriage(c,zones); renderFeed(c); updateMap(c.leads,c.child);
+  } else {
+    postAudit("entity_ignore",{a:x.a,b:x.b,sim:Math.round(x.sim*100)});
+  }
+  renderCandidates(c||{leads:[]});
 }
 function buildZones(leads){ const z={};
   leads.forEach(l=>{ const p=l.place||"Unknown"; (z[p]=z[p]||{place:p,count:0,total:0,max:0,lat:0,lng:0}); z[p].count++; z[p].total+=l.match_score; z[p].max=Math.max(z[p].max,l.match_score); z[p].lat+=l.lat||0; z[p].lng+=l.lng||0; });
@@ -2137,6 +2305,7 @@ function renderTimeline(leads,zones){
 }
 function resetOp(){
   clearInterval(poll); window._syncCase=null; lockNav();
+  clearInterval(_reasonTick); const _ov=$("reasoningOverlay"); if(_ov){ _ov.classList.add("hidden"); _ov.classList.remove("closing"); }
   ["pageOverview","pageMap","pageAnalysis","pageCctv","pageHandoff","pageAsk"].forEach(p=>$(p).classList.add("hidden"));
   const nu=$("navUser"); if(nu) nu.hidden=true;
   intakeMode="case"; showPage("intake");
@@ -2347,6 +2516,7 @@ async function refresh(){
   const rel=(c.intelligence&&c.intelligence.relevance)||{};
   if(Object.keys(rel).length>0) c.leads=c.leads.filter(l=>(rel[l.id]??10)>=4);
   window._lastCase=c;
+  renderReasoning(c);   // feed the cinematic loader real pipeline state
   curMax=Math.max(1, ...c.leads.map(l=>l.match_score));
   const target=c.sources_searched, step=Math.max(11,Math.round((target-dispCount)/4));
   dispCount=Math.min(target,dispCount+step);
