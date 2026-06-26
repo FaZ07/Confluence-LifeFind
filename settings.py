@@ -56,9 +56,9 @@ def use_offline(value: bool | None) -> None:
     _OFFLINE_CTX.set(value)
 
 # --- outbound HTTP (hardening) -----------------------------------------
-REQUEST_TIMEOUT = _f("LIFELINE_HTTP_TIMEOUT", 15.0)
-HTTP_RETRIES = _i("LIFELINE_HTTP_RETRIES", 2)       # extra attempts on transient errors
-HTTP_BACKOFF = _f("LIFELINE_HTTP_BACKOFF", 0.6)     # seconds, exponential
+REQUEST_TIMEOUT = _f("LIFELINE_HTTP_TIMEOUT", 9.0)  # snappy live mode — never let a slow source stall the case
+HTTP_RETRIES = _i("LIFELINE_HTTP_RETRIES", 1)       # extra attempts on transient errors
+HTTP_BACKOFF = _f("LIFELINE_HTTP_BACKOFF", 0.5)     # seconds, exponential
 MAX_LEADS_PER_SOURCE = _i("LIFELINE_MAX_LEADS_PER_SOURCE", 8)
 
 CONTACT_EMAIL = os.getenv("LIFELINE_CONTACT", "mohamedfazil1812700@gmail.com")

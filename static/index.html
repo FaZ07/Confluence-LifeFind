@@ -449,6 +449,16 @@
   .bridge .bic{ width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center; justify-content:center;
     font-size:14px; background:var(--card-solid); border:1px solid var(--line-2); }
   .bridge .barr{ color:var(--primary); font-weight:800; }
+  /* city autocomplete */
+  .ac-wrap{ position:relative; }
+  .ac-list{ position:absolute; left:0; right:0; top:calc(100% + 5px); z-index:60; max-height:248px; overflow:auto;
+    background:var(--card-solid); border:1px solid var(--line-2); border-radius:12px; box-shadow:var(--shadow-lg); padding:5px; }
+  .ac-item{ display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:9px; cursor:pointer; font-size:12.5px; color:var(--ink); }
+  .ac-item:hover{ background:rgba(37,99,235,.08); }
+  .ac-item .ac-ic{ color:var(--primary); flex:none; font-size:12px; }
+  .ac-item .ac-nm{ font-weight:600; white-space:nowrap; }
+  .ac-item .ac-sub{ color:var(--faint); font-size:10.5px; margin-left:auto; flex:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:55%; }
+  .ac-empty{ padding:10px 11px; font-size:11.5px; color:var(--faint); }
 
   .cats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:24px; }
   .cat{ display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; padding:13px 14px; border-radius:14px;
@@ -1051,7 +1061,7 @@
         <div class="nu-role">Active case</div>
       </div>
     </div>
-    <div class="nav-foot">The bridge between families searching and the officials who can act. Public signal only — never a replacement for the police.</div>
+    <div class="nav-foot">The bridge between families searching and the officials who can act — built on public signal.</div>
   </aside>
 
   <div class="content">
@@ -1088,7 +1098,7 @@
           </div>
           <div class="kicker">Family intake · report a missing person</div>
           <h1 id="formTitle">New case · missing child</h1>
-          <p class="sub">LifeFind connects <b>families searching</b> with the <b>officials who can act</b>. It turns a family's scattered worry into one ranked, corroborated, <b>official-ready</b> case from <b>public</b> signal — then hands it to the authorities. It supports the people searching; it never replaces the police.</p>
+          <p class="sub">LifeFind connects <b>families searching</b> with the <b>officials who can act</b>. It turns a family's scattered worry into one ranked, corroborated, <b>official-ready</b> case from <b>public</b> signal — then hands it to the authorities to act on.</p>
           <div class="bridge">
             <span class="bstep"><span class="bic">👪</span>Family reports</span>
             <span class="barr">→</span>
@@ -1120,7 +1130,12 @@
               <div class="field"><label>Age</label><input id="age" /></div>
               <div class="field"><label>Last seen — date &amp; time</label><input id="last_seen_time" type="datetime-local" step="60" /></div>
             </div>
-            <div class="field"><label>Last seen — location</label><input id="last_seen_location" /></div>
+            <div class="field"><label>Last seen — location</label>
+              <div class="ac-wrap">
+                <input id="last_seen_location" autocomplete="off" placeholder="Start typing a city or area — pick the exact place…" oninput="acInput(this.value)" onfocus="acInput(this.value)" />
+                <div class="ac-list hidden" id="acList"></div>
+              </div>
+            </div>
             <div class="field"><label>Clothing (comma separated)</label><input id="clothing" /></div>
             <div class="field"><label>Distinguishing features</label><input id="distinguishing_features" /></div>
           </div>
@@ -1381,7 +1396,7 @@
       <section id="pageHandoff" class="page hidden">
         <div class="handoff-intro">
           <div class="hi-k">▣ Hand the case to the officials who can act</div>
-          <p>This is where the bridge completes: the family's case — ranked, corroborated and sourced — goes to the <b>authorities</b>. LifeFind only aggregates <b>public</b> signal and is <b>not</b> a substitute for an official investigation. Report to and verify with the official channels below; in an emergency call your local emergency number.</p>
+          <p>This is where the bridge completes: the family's case — ranked, corroborated and sourced — goes to the <b>authorities</b>. Every official channel below is one click from filing or escalating; in an emergency call your local emergency number.</p>
         </div>
         <div class="handoff-grid">
           <div class="panel handoff-panel">
@@ -1525,17 +1540,8 @@ fetch("/api/health").then(r=>r.json()).then(h=>{ SV=!!h.sync; useLive=!!h.live_d
     document.querySelectorAll('.mtab[data-m="sighting"]').forEach(t=>{ t.style.display="none"; });
   }
 }).catch(()=>{});
-// AI plain-language summaries are a cosmetic extra (the engine decides everything without them).
-// Never show families/officials an alarming "AI offline / no key" banner — only surface a quiet
-// positive note when it's genuinely ON (a key is set on the deployment).
-function renderAiStatus(h){
-  const box=$("aiStatus"); if(!box) return;
-  const st=(h&&h.narrate_status)||{on:!!(h&&h.narrate),reason:""};
-  if(!st.on || sessionStorage.getItem("aiStatusDismissed")){ box.hidden=true; return; }
-  box.className="ai-status up"; box.hidden=false;
-  $("aiStatusTxt").textContent=`AI plain-language summaries on${st.model?" · "+st.model:""}`;
-  $("aiStatusWhy").textContent="";
-}
+// The narration layer is an internal, cosmetic extra — it is never surfaced in the UI.
+function renderAiStatus(h){ const box=$("aiStatus"); if(box) box.hidden=true; }
 function dismissAiStatus(){ sessionStorage.setItem("aiStatusDismissed","1"); const b=$("aiStatus"); if(b) b.hidden=true; }
 function toggleLive(){ useLive=!useLive; updateSrcToggle(); }
 function updateSrcToggle(){
@@ -1628,6 +1634,8 @@ function startReasoning(child){
     .map(([id,v,k])=>`<div class="rm"><div class="rm-v" id="${id}">${v}</div><div class="rm-k">${k}</div></div>`).join("");
   ov.classList.remove("hidden","closing"); ov.setAttribute("aria-hidden","false");
   clearInterval(_reasonTick); _reasonTick=setInterval(reasonTick,440);
+  // hard watchdog — a real (live) case must never trap the user on the loader
+  clearTimeout(window._reasonWatchdog); window._reasonWatchdog=setTimeout(()=>finishReasoning(true),26000);
 }
 function renderReasoning(c){
   const ov=$("reasoningOverlay"); if(!c||!ov||ov.classList.contains("hidden")) return;
@@ -1649,19 +1657,60 @@ function reasonTick(){
     $("reasonStream").appendChild(line);
     $("reasonBar").style.width=Math.round(100*_reasonShown.size/REASON_STEPS.length)+"%";
   }
-  if(_reasonComplete && _reasonShown.size>=REASON_STEPS.length){ clearInterval(_reasonTick); setTimeout(()=>finishReasoning(),650); }
+  // Done when the case is finished AND nothing more is queued — steps that never
+  // became relevant (e.g. no cross-source fusion in a sparse case) must NOT block it.
+  const pending=REASON_STEPS.some(s=>_reasonReady.has(s.id)&&!_reasonShown.has(s.id));
+  if(_reasonComplete && !pending){ clearInterval(_reasonTick); setTimeout(()=>finishReasoning(),600); }
 }
 function finishReasoning(skip){
-  clearInterval(_reasonTick);
+  clearInterval(_reasonTick); clearTimeout(window._reasonWatchdog);
   const ov=$("reasoningOverlay"); if(!ov||ov.classList.contains("hidden")) return;
+  $("reasonBar").style.width="100%";
   const reveal=()=>{ ov.classList.add("hidden"); ov.classList.remove("closing"); ov.setAttribute("aria-hidden","true");
     showPage("map"); if(map) setTimeout(()=>{ map.invalidateSize(); if(window._lastCase) updateMap(window._lastCase.leads,window._lastCase.child); },70); };
   if(skip){ reveal(); } else { ov.classList.add("closing"); setTimeout(reveal,560); }
 }
 
+// ---- city / place autocomplete (OpenStreetMap, free, no key) ----
+let _acTimer=null, _acSeq=0; window._pickedCoord=null;
+function acInput(v){
+  window._pickedCoord=null;                 // editing the text invalidates a previous pick
+  clearTimeout(_acTimer);
+  const q=(v||"").trim();
+  if(q.length<2){ acHide(); return; }
+  _acTimer=setTimeout(()=>acFetch(q),320);  // debounce (also respects OSM rate limit)
+}
+async function acFetch(q){
+  const seq=++_acSeq;
+  try{
+    const r=await (await fetch(`/api/geocode?q=${encodeURIComponent(q)}`)).json();
+    if(seq!==_acSeq) return;                 // a newer keystroke superseded this
+    acRender(r.results||[]);
+  }catch(e){ acHide(); }
+}
+function acRender(items){
+  const list=$("acList"); if(!list) return;
+  window._acItems=items;
+  if(!items.length){ list.innerHTML='<div class="ac-empty">No match yet — keep typing, or just enter it manually.</div>'; list.classList.remove("hidden"); return; }
+  list.innerHTML=items.map((it,i)=>`<div class="ac-item" onmousedown="acPick(${i})"><span class="ac-ic">◎</span><span class="ac-nm">${escHtml(it.short)}</span><span class="ac-sub">${escHtml((it.label||"").split(",").slice(1,4).join(", ").trim())}</span></div>`).join("");
+  list.classList.remove("hidden");
+}
+function acPick(i){
+  const it=(window._acItems||[])[i]; if(!it) return;
+  $("last_seen_location").value=it.label;
+  window._pickedCoord={lat:it.lat,lng:it.lng,label:it.label};   // exact coords flow into the search
+  acHide();
+}
+function acHide(){ const l=$("acList"); if(l) l.classList.add("hidden"); }
+document.addEventListener("click",e=>{ if(!e.target.closest(".ac-wrap")) acHide(); });
+
 $("launch").onclick=async()=>{
   const child={category:activeCat}; FIELDS.forEach(f=>child[f]=f==="last_seen_time"?fromDateTimePickerValue($(f).value):$(f).value);
   child.live=useLive;   // Demo (bundled) vs Live (real public sources) for this search
+  // exact coordinates when the location was chosen from autocomplete → centers correctly worldwide
+  if(window._pickedCoord && $("last_seen_location").value===window._pickedCoord.label){
+    child.lat=window._pickedCoord.lat; child.lng=window._pickedCoord.lng;
+  }
   const resp=await (await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(child)})).json();
   caseId=resp.case_id||resp.id; _authLoaded=false; setExportLinks();
   unlockNav(); populateNavUser(child); startReasoning(child);   // cinematic loader takes the stage
@@ -2321,7 +2370,7 @@ function renderTimeline(leads,zones){
 }
 function resetOp(){
   clearInterval(poll); window._syncCase=null; lockNav();
-  clearInterval(_reasonTick); const _ov=$("reasoningOverlay"); if(_ov){ _ov.classList.add("hidden"); _ov.classList.remove("closing"); }
+  clearInterval(_reasonTick); clearTimeout(window._reasonWatchdog); const _ov=$("reasoningOverlay"); if(_ov){ _ov.classList.add("hidden"); _ov.classList.remove("closing"); }
   ["pageOverview","pageMap","pageAnalysis","pageCctv","pageHandoff","pageAsk"].forEach(p=>$(p).classList.add("hidden"));
   const nu=$("navUser"); if(nu) nu.hidden=true;
   intakeMode="case"; showPage("intake");

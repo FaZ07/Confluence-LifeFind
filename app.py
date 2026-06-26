@@ -102,6 +102,8 @@ class ChildIn(BaseModel):
     clothing: str = ""
     distinguishing_features: str = ""
     live: bool | None = None   # data source for this search: True=live, False=demo, None=server default
+    lat: float | None = None   # resolved coords when the location was picked from autocomplete
+    lng: float | None = None
 
     @field_validator("category", "name", "age", "photo_url", "last_seen_location",
                      "last_seen_time", "clothing", "distinguishing_features", mode="before")
@@ -148,6 +150,15 @@ async def run_search(case_id: str, offline: bool | None = None) -> None:
         # Global geocoding: resolve the case location (any city on earth) + gazetteer.
         gaz = await geo.build_gazetteer(child.get("last_seen_location", ""))
         center = gaz.get("center")
+        # If the location was picked from autocomplete, trust those coords as the map
+        # center — this is what makes "Jaipur" actually center on Jaipur (even in demo,
+        # where live geocoding is skipped) instead of collapsing to a default city.
+        if center is None and child.get("lat") is not None and child.get("lng") is not None:
+            lbl = (child.get("last_seen_location") or "").split(",")[0].strip() or "Last seen"
+            center = (float(child["lat"]), float(child["lng"]), lbl)
+            gaz["center"] = center
+            if not gaz.get("city_coord"):
+                gaz["city_coord"] = center
         if center:
             child["lat"], child["lng"], child["place"] = center
         case["geocoded"] = center is not None
@@ -290,6 +301,12 @@ async def post_audit(case_id: str, body: dict):
 @app.get("/api/categories")
 async def categories():
     return sources.CATEGORIES
+
+
+@app.get("/api/geocode")
+async def geocode_suggest(q: str = ""):
+    """Typeahead city/place suggestions for the intake field (OpenStreetMap, free, no key)."""
+    return {"results": await geo.suggest(q)}
 
 
 # How long ago each demo subject was "last seen" — chosen so the time-aware search

@@ -68,6 +68,49 @@ def _short_label(display: str, fallback: str) -> str:
     return (display.split(",")[0].strip() or fallback).strip()
 
 
+def _offline_suggest(query: str) -> list[dict]:
+    low = (query or "").lower().strip()
+    out = []
+    for key, (lat, lng, label) in OFFLINE_PLACES.items():
+        if low and (low in key or low in label.lower()):
+            out.append({"label": label, "short": label, "lat": lat, "lng": lng})
+    return out[:8]
+
+
+async def suggest(query: str, limit: int = 6) -> list[dict]:
+    """Typeahead place suggestions for the intake field. Always tries Nominatim (it's a
+    UI helper, not case data), so it resolves any real city worldwide even in demo mode;
+    falls back to the offline gazetteer when there's no network."""
+    global _last_call
+    q = (query or "").strip()
+    if len(q) < 2:
+        return []
+    if not settings.GEOCODE_ENABLED:
+        return _offline_suggest(q)
+    async with _lock:                                  # honour OSM 1 req/sec
+        wait = settings.GEOCODE_MIN_INTERVAL - (time.monotonic() - _last_call)
+        if wait > 0:
+            await asyncio.sleep(wait)
+        _last_call = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT, follow_redirects=True) as client:
+            r = await client.get(
+                settings.NOMINATIM_BASE,
+                params={"q": q, "format": "json", "limit": limit, "addressdetails": 0},
+                headers={"User-Agent": settings.USER_AGENT},
+            )
+            r.raise_for_status()
+            out = []
+            for it in r.json():
+                disp = it.get("display_name", "")
+                out.append({"label": disp, "short": _short_label(disp, q),
+                            "lat": round(float(it["lat"]), 5), "lng": round(float(it["lon"]), 5)})
+            return out or _offline_suggest(q)
+    except Exception as e:  # noqa: BLE001 — typeahead is best-effort
+        log.warning("suggest failed for %r: %s", q, e)
+        return _offline_suggest(q)
+
+
 async def _nominatim(query: str) -> Coord | None:
     global _last_call
     async with _lock:  # serialize + throttle to honour OSM's 1 req/sec policy
