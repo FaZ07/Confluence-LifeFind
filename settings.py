@@ -57,9 +57,12 @@ GEOCODE_MAX_LOOKUPS = _i("LIFELINE_GEOCODE_MAX", 12)          # bound live looku
 DB_PATH = os.getenv("LIFELINE_DB", str(_HERE / "lifefind.db"))
 PERSIST = _b("LIFELINE_PERSIST", True)
 CASE_TTL_DAYS = _i("LIFELINE_CASE_TTL_DAYS", 30)
+MAX_ACTIVE_CASES = _i("LIFELINE_MAX_ACTIVE_CASES", 200)   # in-memory cap; older fall back to store
+GEOCODE_CACHE_MAX = _i("LIFELINE_GEOCODE_CACHE_MAX", 5000)
 
 # --- API hardening -----------------------------------------------------
 RATE_LIMIT_PER_MIN = _i("LIFELINE_RATE_LIMIT_PER_MIN", 20)    # /api/search per client per minute
 MAX_FIELD_LEN = _i("LIFELINE_MAX_FIELD_LEN", 200)
 MAX_IMAGE_BYTES = _i("LIFELINE_MAX_IMAGE_BYTES", 8 * 1024 * 1024)  # photo color analysis upload cap
 ALLOW_ORIGINS = [o for o in os.getenv("LIFELINE_CORS", "*").split(",") if o]
+API_KEY = os.getenv("LIFELINE_API_KEY", "").strip()   # optional gate on case creation / reverse

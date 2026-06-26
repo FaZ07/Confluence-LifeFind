@@ -12,8 +12,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import secrets
 import time
-import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -28,6 +28,7 @@ import export
 import geo
 import intel
 import places
+import reverse
 import searchmodel
 import settings
 import sources
@@ -48,6 +49,12 @@ CASES: dict[str, dict] = {}
 
 # --- simple per-client rate limiter for the expensive search endpoint ---
 _HITS: dict[str, list[float]] = {}
+
+
+def _require_key(request: Request) -> None:
+    """Optional shared-secret gate (off unless LIFELINE_API_KEY is set)."""
+    if settings.API_KEY and request.headers.get("X-API-Key") != settings.API_KEY:
+        raise HTTPException(401, "invalid or missing API key")
 
 
 def _rate_ok(client: str) -> bool:
@@ -97,9 +104,25 @@ class ChildIn(BaseModel):
         return v.strip()[: settings.MAX_FIELD_LEN] if isinstance(v, str) else v
 
 
+def _evict_old_cases() -> None:
+    """Keep memory bounded — evict the oldest in-memory cases beyond the cap.
+    Evicted cases remain readable from the persistent store."""
+    overflow = len(CASES) - settings.MAX_ACTIVE_CASES
+    if overflow <= 0:
+        return
+    for cid in sorted(CASES, key=lambda c: CASES[c].get("created_at", 0))[:overflow]:
+        CASES.pop(cid, None)
+
+
 def _get_case(case_id: str) -> dict | None:
-    """Live in-memory case if present, else a persisted snapshot, else None."""
-    return CASES.get(case_id) or store.load(case_id)
+    """Live in-memory case if present, else a persisted snapshot, else None.
+    Cases older than CASE_TTL_DAYS are treated as expired (sensitive data)."""
+    case = CASES.get(case_id) or store.load(case_id)
+    if not case:
+        return None
+    if time.time() - case.get("created_at", time.time()) > settings.CASE_TTL_DAYS * 86400:
+        return None
+    return case
 
 
 async def run_search(case_id: str) -> None:
@@ -135,6 +158,9 @@ async def run_search(case_id: str) -> None:
             for item in raw:
                 geo.locate_lead(item, gaz, center)        # plot it (global)
                 lead = score_lead(item, case, channel["weight"])
+                if not lead.get("on_topic"):              # drop generic noise, keep a tally
+                    case["filtered"] += 1
+                    continue
                 if any(l["url"] == lead["url"] for l in case["leads"]):
                     continue
                 case["leads"].append(lead)
@@ -168,6 +194,7 @@ async def run_search(case_id: str) -> None:
 
 @app.post("/api/search")
 async def start_search(child: ChildIn, request: Request):
+    _require_key(request)
     client = request.client.host if request.client else "anon"
     if not _rate_ok(client):
         raise HTTPException(429, "rate limit exceeded — slow down a moment")
@@ -176,13 +203,15 @@ async def start_search(child: ChildIn, request: Request):
     if child.category not in {c["key"] for c in sources.CATEGORIES}:
         child.category = "missing"
 
-    case_id = uuid.uuid4().hex[:8]
+    case_id = secrets.token_urlsafe(12)   # unguessable — the link exposes case PII
     CASES[case_id] = {
         "id": case_id, "child": child.model_dump(), "leads": [],
+        "created_at": time.time(),
         "sources_searched": 0, "elapsed_s": 0.0, "done": False,
         "geocoded": False, "diagnostics": [], "intelligence": None, "error": None,
-        "search_model": None, "cctv": None,
+        "search_model": None, "cctv": None, "filtered": 0,
     }
+    _evict_old_cases()
     asyncio.create_task(run_search(case_id))
     return {"case_id": case_id}
 
@@ -313,6 +342,21 @@ async def vision_colors(body: dict):
                     "Review before using — colors only, no identity inference."}
 
 
+@app.post("/api/reverse")
+async def reverse_search(body: dict, request: Request):
+    """Match a reported sighting against known open cases (in-memory + persisted)."""
+    _require_key(request)
+    sighting = {k: (body.get(k) or "").strip()[: settings.MAX_FIELD_LEN]
+                for k in ("location", "description", "clothing", "age")}
+    if not sighting["location"] and not sighting["description"]:
+        raise HTTPException(422, "provide at least a location or a description")
+    cases: dict[str, dict] = {}
+    for c in list(CASES.values()) + store.recent():
+        if c.get("id"):
+            cases.setdefault(c["id"], c)
+    return {"matches": reverse.match_sighting(sighting, list(cases.values())), "checked": len(cases)}
+
+
 @app.get("/api/health")
 async def health():
     return {
@@ -326,6 +370,12 @@ async def health():
 @app.get("/")
 async def index():
     return FileResponse(STATIC / "index.html")
+
+
+@app.get("/family")
+async def family():
+    """Calm, read-only family view (no raw-lead firehose, no chat/export)."""
+    return FileResponse(STATIC / "family.html")
 
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")

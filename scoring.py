@@ -13,7 +13,7 @@ That is the whole pitch: a judge can ask "why is this lead 87?" and you read it 
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 
@@ -39,8 +39,8 @@ def _recency_score(date_str: str | None) -> float:
     for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"):
         try:
             d = datetime.strptime(date_str[: len(fmt) + 2], fmt[: len(fmt)])
-            d = d.replace(tzinfo=timezone.utc)
-            age_days = (datetime.now(timezone.utc) - d).days
+            d = d.replace(tzinfo=UTC)
+            age_days = (datetime.now(UTC) - d).days
             return max(0.0, 1.0 - age_days / 30.0)
         except ValueError:
             continue
@@ -96,6 +96,9 @@ def score_lead(raw: dict, case: dict, source_weight: float) -> dict:
         "date": raw.get("date") or raw.get("last_updated") or "",
         "match_score": score,
         "matched_attributes": matched,
+        # A lead is on-topic only if it actually matched the subject's name,
+        # last-seen location or clothing — otherwise it's generic noise.
+        "on_topic": bool(matched),
         "breakdown": breakdown,
         # geo for the Operations Map
         "lat": raw.get("lat"),
@@ -110,20 +113,32 @@ def score_lead(raw: dict, case: dict, source_weight: float) -> dict:
     }
 
 
+def _jaccard(a: set[str], b: set[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
 def dedup(leads: list[dict]) -> list[dict]:
-    """Drop near-duplicate leads (same URL, or same domain + very similar title)."""
+    """Drop duplicates: same URL, same domain+title signature, OR the same story
+    reworded across outlets (high title-token overlap). Highest score wins."""
     seen_urls: set[str] = set()
     seen_sig: set[str] = set()
+    kept_tokens: list[set[str]] = []
     out: list[dict] = []
     for lead in sorted(leads, key=lambda x: x["match_score"], reverse=True):
         url = lead.get("url", "")
         domain = urlparse(url).netloc.replace("www.", "")
-        sig = domain + "|" + "".join(sorted(_tokens(lead["title"])))[:40]
+        toks = _tokens(lead["title"])
+        sig = domain + "|" + "".join(sorted(toks))[:40]
         if url and url in seen_urls:
             continue
         if sig in seen_sig:
             continue
+        if any(_jaccard(toks, kt) >= 0.7 for kt in kept_tokens):  # same story, diff outlet
+            continue
         seen_urls.add(url)
         seen_sig.add(sig)
+        kept_tokens.append(toks)
         out.append(lead)
     return out

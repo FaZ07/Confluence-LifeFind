@@ -118,3 +118,20 @@ def test_lead_status_update_and_chat_validation(client):
     assert client.post(f"/api/case/{cid}/lead/{lid}/status", json={"status": "verified"}).status_code == 200
     assert client.post(f"/api/case/{cid}/lead/ghost/status", json={"status": "x"}).status_code == 404
     assert client.post(f"/api/case/{cid}/chat", json={"message": ""}).status_code == 422
+
+
+def test_reverse_search_matches_open_case(client):
+    case = _completed_case("revcase01"); appmod.CASES[case["id"]] = case
+    out = client.post("/api/reverse", json={"location": "Marina Beach Chennai",
+                                            "description": "boy red striped shirt", "age": "8"}).json()
+    assert out["checked"] >= 1
+    assert any(m["case_id"] == "revcase01" for m in out["matches"])
+
+
+def test_reverse_search_validation(client):
+    assert client.post("/api/reverse", json={"location": "", "description": ""}).status_code == 422
+
+
+def test_family_view_served(client):
+    r = client.get("/family")
+    assert r.status_code == 200 and "FAMILY" in r.text.upper()

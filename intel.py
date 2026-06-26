@@ -13,7 +13,7 @@ Emits exactly the JSON shape the UI already consumes:
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import analysis
 
@@ -30,8 +30,8 @@ def _days_ago(date_str: str | None) -> int | None:
     if not date_str:
         return None
     try:
-        d = datetime.strptime(date_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-        return max(0, (datetime.now(timezone.utc) - d).days)
+        d = datetime.strptime(date_str[:10], "%Y-%m-%d").replace(tzinfo=UTC)
+        return max(0, (datetime.now(UTC) - d).days)
     except ValueError:
         return None
 

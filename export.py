@@ -7,7 +7,7 @@ from __future__ import annotations
 import csv
 import html
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def leads_csv(case: dict) -> str:
@@ -33,7 +33,7 @@ def case_report_html(case: dict) -> str:
     intel = case.get("intelligence") or {}
     cmd = intel.get("commander") or {}
     zones = cmd.get("priority_zones") or []
-    generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    generated = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
     zone_rows = "".join(
         f"<tr><td>{i+1}</td><td>{_esc(z.get('zone'))}</td>"

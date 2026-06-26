@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LifeFind — Family updates</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#0b1020; --card:#111a30; --line:rgba(255,255,255,.09); --ink:#eaf0fb;
+    --muted:#9fb0cf; --faint:#6b7a99; --teal:#62E8FF; --green:#6ee7b7; --amber:#ffcf8a; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; min-height:100vh; background:
+      radial-gradient(900px 500px at 80% -10%, rgba(98,232,255,.06), transparent 60%),
+      var(--bg); color:var(--ink); font-family:"Inter",system-ui,sans-serif; line-height:1.55; }
+  .wrap{ max-width:680px; margin:0 auto; padding:30px 20px 60px; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:2px; font-size:14px; margin-bottom:6px; }
+  .brand b{ color:var(--amber); } .brand .dot{ width:9px;height:9px;border-radius:50%;background:var(--green); box-shadow:0 0 0 0 rgba(110,231,183,.6); animation:p 1.8s infinite; }
+  @keyframes p{ 0%{box-shadow:0 0 0 0 rgba(110,231,183,.5)} 70%{box-shadow:0 0 0 8px rgba(110,231,183,0)} 100%{box-shadow:0 0 0 0 rgba(110,231,183,0)} }
+  h1{ font-size:22px; margin:14px 0 4px; }
+  .sub{ color:var(--muted); margin:0 0 22px; font-size:14px; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 22px; margin-bottom:16px; }
+  .status{ display:flex; align-items:center; gap:12px; }
+  .status .ic{ width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex:none;
+    background:rgba(98,232,255,.1); border:1px solid rgba(98,232,255,.25); }
+  .status .st{ font-weight:600; font-size:16px; } .status .sd{ color:var(--muted); font-size:13px; }
+  .who h2{ margin:0 0 2px; font-size:19px; } .who .meta{ color:var(--muted); font-size:13.5px; }
+  .row{ display:flex; justify-content:space-between; padding:9px 0; border-top:1px solid var(--line); font-size:14px; }
+  .row:first-child{ border-top:none; } .row .k{ color:var(--muted); }
+  .ck{ display:flex; align-items:center; gap:10px; padding:8px 0; font-size:14px; }
+  .ck .b{ width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none;
+    background:rgba(110,231,183,.12); border:1px solid rgba(110,231,183,.3); color:var(--green); }
+  .ck .b.pending{ background:rgba(255,255,255,.05); border-color:var(--line); color:var(--faint); }
+  .zone{ display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
+  .zone:first-child{ border-top:none; } .zone .zn{ flex:1; font-weight:600; font-size:14.5px; }
+  .ztag{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; }
+  .HIGH{ color:#0a0d16; background:var(--amber); } .MEDIUM{ color:#0a0d16; background:var(--teal); }
+  .LOW{ color:var(--muted); background:rgba(255,255,255,.06); border:1px solid var(--line); }
+  .ct{ font-size:11.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--faint); margin-bottom:13px; }
+  .note{ background:rgba(255,207,138,.06); border:1px solid rgba(255,207,138,.25); border-radius:14px;
+    padding:16px 18px; font-size:13.5px; color:var(--amber); line-height:1.6; }
+  .note b{ color:#ffe2b5; }
+  .foot{ text-align:center; color:var(--faint); font-size:12px; margin-top:18px; }
+  .err{ color:#ffb4b4; font-size:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="dot"></span>LIFE<b>FIND</b> · FAMILY UPDATES</div>
+  <h1 id="title">Loading the latest…</h1>
+  <p class="sub" id="updated"></p>
+
+  <div class="card" id="statusCard" style="display:none">
+    <div class="status">
+      <div class="ic" id="statusIc">◐</div>
+      <div><div class="st" id="statusText">—</div><div class="sd" id="statusDetail"></div></div>
+    </div>
+  </div>
+
+  <div class="card who" id="whoCard" style="display:none">
+    <h2 id="who">—</h2><div class="meta" id="whoMeta"></div>
+  </div>
+
+  <div class="card" id="checkedCard" style="display:none">
+    <div class="ct">What we have checked</div>
+    <div id="checked"></div>
+  </div>
+
+  <div class="card" id="zonesCard" style="display:none">
+    <div class="ct">Areas mentioned most in public reports</div>
+    <div id="zones"></div>
+  </div>
+
+  <div class="note">
+    <b>Please read:</b> this page shows analysis of <b>public</b> news and posts only.
+    It is <b>not</b> a confirmed location and not a substitute for the official search.
+    Please stay in close contact with the police handling this case, and call your local
+    emergency number if there is any immediate danger.
+  </div>
+
+  <div class="foot">LifeFind aggregates public signal to support the search · this view updates automatically</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const caseId = new URLSearchParams(location.search).get('case');
+const CHANNELS = ["News wire","Local news","Global monitor","Sightings"];
+
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+async function tick(){
+  if(!caseId){ $("title").innerHTML='<span class="err">No case link provided.</span>'; return; }
+  let c;
+  try{ const r = await fetch(`/api/case/${caseId}`); if(!r.ok){ $("title").innerHTML='<span class="err">This case link is not available or has expired.</span>'; return; } c = await r.json(); }
+  catch(e){ return; }
+
+  $("title").textContent = "Search update";
+  $("updated").textContent = "Updated just now" + (c.error ? " · some sources were unavailable" : "");
+
+  // status
+  $("statusCard").style.display="";
+  if(c.done){ $("statusIc").textContent="✓"; $("statusText").textContent="Public-source search complete";
+    $("statusDetail").textContent = `${(c.leads||[]).length} relevant public reports reviewed`; }
+  else { $("statusIc").textContent="◐"; $("statusText").textContent="Searching public sources now…";
+    $("statusDetail").textContent = `${(c.sources_searched||0).toLocaleString()} sources scanned so far`; }
+
+  // who
+  const ch=c.child||{};
+  $("whoCard").style.display="";
+  $("who").textContent = ch.name || "Subject";
+  $("whoMeta").innerHTML = `${ch.age?("Age "+esc(ch.age)+" · "):""}Last seen: ${esc(ch.last_seen_location||"—")}${ch.last_seen_time?(" · "+esc(ch.last_seen_time)):""}`;
+
+  // what we've checked
+  const done = new Set((c.diagnostics||[]).map(d=>d.channel));
+  $("checkedCard").style.display="";
+  $("checked").innerHTML = CHANNELS.map(name=>{
+    const ok = done.has(name);
+    return `<div class="ck"><span class="b ${ok?"":"pending"}">${ok?"✓":"…"}</span>${esc(name)}</div>`;
+  }).join("");
+
+  // areas (priority zones) — framed calmly
+  const zones = ((c.intelligence||{}).commander||{}).priority_zones || [];
+  if(zones.length){
+    $("zonesCard").style.display="";
+    $("zones").innerHTML = zones.slice(0,4).map(z=>{
+      const conf=(z.confidence||"LOW").toUpperCase();
+      return `<div class="zone"><span class="zn">${esc(z.zone)}</span><span class="ztag ${conf}">${esc(conf.toLowerCase())} mention</span></div>`;
+    }).join("");
+  }
+}
+tick();
+setInterval(tick, 4000);
+</script>
+</body>
+</html>

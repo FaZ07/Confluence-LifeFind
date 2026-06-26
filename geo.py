@@ -106,6 +106,8 @@ async def geocode(query: str) -> Coord | None:
     if hit is None and settings.GEOCODE_ENABLED:
         hit = await _nominatim(q)
     _CACHE[key] = hit
+    if len(_CACHE) > settings.GEOCODE_CACHE_MAX:   # bound memory; evict oldest
+        _CACHE.pop(next(iter(_CACHE)))
     return hit
 
 

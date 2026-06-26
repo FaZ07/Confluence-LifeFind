@@ -46,3 +46,24 @@ def test_dedup_drops_same_url():
     out = dedup(leads)
     assert len(out) == 2
     assert out[0]["match_score"] == 80  # highest kept first
+
+
+def test_on_topic_flag_separates_signal_from_noise():
+    case = _case()
+    on = score_lead({"title": "Aarav Sharma seen at Marina Beach", "snippet": "",
+                     "url": "u1", "date": "2026-06-20"}, case, 0.9)
+    off = score_lead({"title": "Cricket scores from Mumbai", "snippet": "unrelated match report",
+                      "url": "u2", "date": "2026-06-20"}, case, 0.9)
+    assert on["on_topic"] is True       # matched name + location
+    assert off["on_topic"] is False     # matched nothing -> garbage
+
+
+def test_dedup_drops_reworded_same_story():
+    leads = [
+        {"url": "http://a/1", "title": "Police search for missing boy Aarav near Marina Beach", "match_score": 85},
+        {"url": "http://b/2", "title": "Police search for missing boy Aarav near Marina Beach today", "match_score": 70},
+        {"url": "http://c/3", "title": "Weather update for Chennai this weekend", "match_score": 40},
+    ]
+    out = dedup(leads)
+    assert len(out) == 2                                  # the two near-identical stories collapse
+    assert any("Weather" in l["title"] for l in out)

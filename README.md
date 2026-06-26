@@ -23,7 +23,7 @@ Groq LLM ripped out, then hardened into something that actually ships.
 | Persistence | in-memory only | SQLite — cases survive restarts, **shareable by link** |
 | Handoff | — | official channels + CSV / printable case report |
 | API keys | `WIRE_API_KEY` + `GROQ_API_KEY` | **none** |
-| Hardening | — | retries · rate-limit · validation · logging · 60 tests |
+| Hardening | — | retries · rate-limit · validation · logging · 69 tests |
 
 ---
 
@@ -40,7 +40,7 @@ No `.env`, no signup, nothing to configure.
 
 ```bash
 LIFELINE_OFFLINE=1 python -m uvicorn app:app   # force the offline demo set (CI / no-wifi stage)
-pytest -q                                        # 60 tests over the whole engine
+pytest -q                                        # 69 tests over the whole engine
 ```
 
 ---
@@ -58,6 +58,12 @@ pytest -q                                        # 60 tests over the whole engin
   (Childline 1098, NCMEC, NamUs, Missing People, INTERPOL …) so the next click is a
   real report — plus one-click **CSV** and a **printable case report** to hand police a
   ranked lead package.
+- **Reverse search & a family view** — flip it: a reported *sighting* is matched against
+  the open cases LifeFind knows. And every case has a calm, read-only **family view**
+  (status, what's been checked, most-mentioned areas) — no raw-lead firehose for an
+  anxious family.
+- **Only relevant leads** — results that match nothing about the subject are filtered as
+  noise; the same story reworded across outlets is de-duplicated.
 
 ## The four real sources (`sources.py`)
 
@@ -149,17 +155,30 @@ hard-fails). All config is env-driven (`settings.py`).
 | `vision.py` | Dominant clothing-color extraction from a photo (colors only) |
 | `searchmodel.py` | Statistical search-radius rings (lost-person-behavior) |
 | `places.py` | CCTV / footage-source discovery (OpenStreetMap) |
-| `scoring.py` | Deterministic, explainable scoring + de-dup |
+| `reverse.py` | Reverse search: sighting → match open cases |
+| `scoring.py` | Deterministic, explainable scoring + de-dup + noise filter |
 | `store.py` | SQLite persistence (shareable cases) |
 | `authorities.py` | Region → official channels |
 | `export.py` | CSV + printable case report |
 | `settings.py` | Env-driven configuration |
-| `static/index.html` | Command center UI — no build step |
-| `tests/` | 60 pytest cases (unit + API) |
+| `static/index.html` | 4-page command center UI — no build step |
+| `static/family.html` | Calm, read-only family view |
+| `tests/` | 69 pytest cases (unit + API) |
 
-### Deploying (Vercel)
-Set `LIFELINE_DB=/tmp/lifefind.db` (serverless filesystems are read-only except `/tmp`).
-Everything else works out of the box with no env at all.
+### Deploying
+LifeFind runs a long-lived process (live streaming + SQLite persistence), so deploy it
+as a **stateful service** with a writable volume — Docker, Fly.io, Render, Railway or a
+plain VM. Serverless (Vercel) is **not** recommended: the background search task and the
+in-memory case stream don't survive per-request lambdas.
+
+```bash
+docker build -t lifefind .
+docker run -p 8000:8000 -v lifefind-data:/data lifefind
+```
+
+No API keys required to run. Tune via env (see [`settings.py`](settings.py)):
+`LIFELINE_DB`, `LIFELINE_CORS`, `LIFELINE_RATE_LIMIT_PER_MIN`, `LIFELINE_CASE_TTL_DAYS`,
+`LIFELINE_API_KEY` (optional gate on case creation), `LIFELINE_MAX_ACTIVE_CASES`.
 
 ---
 

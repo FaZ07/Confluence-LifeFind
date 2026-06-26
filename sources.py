@@ -20,6 +20,7 @@ import json
 import logging
 import re
 import xml.etree.ElementTree as ET
+from datetime import UTC
 from email.utils import parsedate
 
 import httpx
@@ -61,6 +62,42 @@ def build_query(channel: dict, child: dict) -> str:
         "records": f"{name} missing {city}" if name else f"missing {cat} {city}",
         "sight":   f"{cat} missing {city} sighted OR rescued",
     }.get(channel["key"], f"missing {cat} {city}")
+
+
+# Best-effort news locale by region keyword -> (hl, gl, ceid). Defaults to a broad
+# English feed so non-Indian cities aren't forced through an India-only lens.
+_LOCALES = {
+    "IN": ("en-IN", "IN", "IN:en"), "US": ("en-US", "US", "US:en"),
+    "GB": ("en-GB", "GB", "GB:en"), "AU": ("en-AU", "AU", "AU:en"),
+    "CA": ("en-CA", "CA", "CA:en"), "DE": ("en-DE", "DE", "DE:en"),
+    "FR": ("en-FR", "FR", "FR:en"), "JP": ("en-JP", "JP", "JP:en"),
+    "BR": ("en-BR", "BR", "BR:en"), "AE": ("en-AE", "AE", "AE:en"),
+    "SG": ("en-SG", "SG", "SG:en"), "ZA": ("en-ZA", "ZA", "ZA:en"),
+}
+_LOCALE_KEYWORDS = {
+    "IN": ["india", "chennai", "tamil", "kerala", "mumbai", "delhi", "bengaluru",
+           "bangalore", "hyderabad", "kolkata", "pune", "pondicherry", "puducherry"],
+    "US": ["usa", "united states", " u.s", "america", "new york", "california",
+           "texas", "florida", "chicago", "los angeles", "boston", "seattle"],
+    "GB": ["uk", "united kingdom", "england", "london", "scotland", "wales", "manchester"],
+    "AU": ["australia", "sydney", "melbourne", "brisbane", "perth"],
+    "CA": ["canada", "toronto", "vancouver", "montreal", "ottawa"],
+    "DE": ["germany", "berlin", "munich", "hamburg", "frankfurt", "cologne"],
+    "FR": ["france", "paris", "lyon", "marseille", "nice"],
+    "JP": ["japan", "tokyo", "osaka", "kyoto", "shibuya"],
+    "BR": ["brazil", "rio de janeiro", "sao paulo", "brasilia"],
+    "AE": ["uae", "dubai", "abu dhabi", "emirates"],
+    "SG": ["singapore"],
+    "ZA": ["south africa", "johannesburg", "cape town", "durban"],
+}
+
+
+def _locale(child: dict) -> tuple[str, str, str]:
+    low = (child.get("last_seen_location") or "").lower()
+    for code, kws in _LOCALE_KEYWORDS.items():
+        if any(k in low for k in kws):
+            return _LOCALES[code]
+    return ("en-US", "US", "US:en")   # neutral broad-English default
 
 
 # ----------------------------------------------------------------------
@@ -119,9 +156,10 @@ _LIM = settings.MAX_LEADS_PER_SOURCE
 # ----------------------------------------------------------------------
 async def _fetch_gnews(channel: dict, child: dict) -> tuple[int, list[dict]]:
     query = build_query(channel, child)
+    hl, gl, ceid = _locale(child)
     r = await _request("https://news.google.com/rss/search",
                        headers={"User-Agent": settings.USER_AGENT},
-                       params={"q": query, "hl": "en-IN", "gl": "IN", "ceid": "IN:en"})
+                       params={"q": query, "hl": hl, "gl": gl, "ceid": ceid})
     root = ET.fromstring(r.content)
     leads = []
     for it in root.findall(".//item")[:_LIM]:
@@ -145,9 +183,10 @@ async def _fetch_gnews(channel: dict, child: dict) -> tuple[int, list[dict]]:
 # ----------------------------------------------------------------------
 async def _fetch_bing(channel: dict, child: dict) -> tuple[int, list[dict]]:
     query = build_query(channel, child)
+    hl, _, _ = _locale(child)
     r = await _request("https://www.bing.com/news/search",
                        headers={"User-Agent": settings.USER_AGENT},
-                       params={"q": query, "format": "rss", "setmkt": "en-IN"})
+                       params={"q": query, "format": "rss", "setmkt": hl})
     root = ET.fromstring(r.content)
     leads = []
     for it in root.findall(".//item")[:_LIM]:
@@ -196,7 +235,7 @@ async def _fetch_gdelt(channel: dict, child: dict) -> tuple[int, list[dict]]:
 # REAL SOURCE 4 — Reddit search JSON
 # ----------------------------------------------------------------------
 async def _fetch_reddit(channel: dict, child: dict) -> tuple[int, list[dict]]:
-    from datetime import datetime, timezone
+    from datetime import datetime
     query = build_query(channel, child)
     r = await _request("https://www.reddit.com/search.json",
                        headers={"User-Agent": settings.BROWSER_UA, "Accept": "application/json"},
@@ -209,7 +248,7 @@ async def _fetch_reddit(channel: dict, child: dict) -> tuple[int, list[dict]]:
         if not title:
             continue
         created = d.get("created_utc")
-        date = (datetime.fromtimestamp(created, timezone.utc).strftime("%Y-%m-%d") if created else "")
+        date = (datetime.fromtimestamp(created, UTC).strftime("%Y-%m-%d") if created else "")
         sub = d.get("subreddit") or "reddit"
         leads.append({
             "title": title, "url": "https://www.reddit.com" + (d.get("permalink") or ""),

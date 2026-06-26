@@ -82,6 +82,20 @@ def load(case_id: str) -> dict | None:
         return None
 
 
+def recent(limit: int = 200) -> list[dict]:
+    """Most-recently-updated cases (for reverse search). [] if unavailable."""
+    if not _enabled:
+        return []
+    try:
+        with _lock, _connect() as con:
+            rows = con.execute("SELECT data FROM cases ORDER BY updated_at DESC LIMIT ?",
+                               (limit,)).fetchall()
+        return [json.loads(r[0]) for r in rows]
+    except Exception as e:  # noqa: BLE001
+        log.warning("recent failed: %s", e)
+        return []
+
+
 def purge_expired() -> int:
     """Delete cases older than CASE_TTL_DAYS. Returns rows removed."""
     if not _enabled:

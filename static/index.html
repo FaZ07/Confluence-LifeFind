@@ -252,6 +252,10 @@
 <main>
   <!-- INTAKE -->
   <section id="intake" class="intake">
+    <div class="mode-tabs">
+      <button class="mtab on" data-m="case" onclick="showIntake('case')">New case</button>
+      <button class="mtab" data-m="sighting" onclick="showIntake('sighting')">Report a sighting</button>
+    </div>
     <div class="kicker">Decision support · new case</div>
     <h1 id="formTitle">New case · missing child</h1>
     <p class="sub">LifeFind triages scattered <b>public</b> signal into ranked, corroborated leads — to help families, search teams and the authorities act faster. It assists the people searching; it never replaces the police.</p>
@@ -273,6 +277,25 @@
     <div class="field"><label>Distinguishing features</label><input id="distinguishing_features" /></div>
     <button class="btn" id="launch">◉&nbsp;&nbsp;Start case &amp; search public sources</button>
     <p class="intake-foot">If someone is in immediate danger, contact your local emergency number first.</p>
+  </section>
+
+  <!-- REVERSE SEARCH · report a sighting -->
+  <section id="sighting" class="intake hidden">
+    <div class="mode-tabs">
+      <button class="mtab" data-m="case" onclick="showIntake('case')">New case</button>
+      <button class="mtab on" data-m="sighting" onclick="showIntake('sighting')">Report a sighting</button>
+    </div>
+    <div class="kicker">Reverse search · match a sighting</div>
+    <h1>Report a sighting</h1>
+    <p class="sub">Saw someone who might be a missing person? Describe what you saw and LifeFind checks it against the open cases it knows. This does not contact anyone — if it's urgent, call your local emergency number.</p>
+    <div class="field"><label>Where did you see them?</label><input id="s_location" /></div>
+    <div class="field"><label>Description (apparent age, build, anything notable)</label><input id="s_description" /></div>
+    <div class="grid2">
+      <div class="field"><label>Clothing</label><input id="s_clothing" /></div>
+      <div class="field"><label>Approx age</label><input id="s_age" /></div>
+    </div>
+    <button class="btn" onclick="submitSighting()">◎&nbsp;&nbsp;Check against open cases</button>
+    <div id="sightingResults" class="s-results"></div>
   </section>
 
   <!-- PAGE 2 · LIVE MAP -->
@@ -382,11 +405,12 @@
       <div class="panel handoff-panel">
         <div class="p-h"><span class="t">Share &amp; export</span></div>
         <div class="ops-actions">
-          <button class="oa-btn" id="shareBtn" onclick="shareCase()">⤴ Share live case link</button>
+          <button class="oa-btn" id="shareBtn" onclick="shareCase()">⤴ Share operational link (police / team)</button>
+          <button class="oa-btn" id="familyBtn" onclick="shareFamily()">👪 Share calm family view</button>
           <a class="oa-btn" id="csvLink" href="#" download>⬇ Leads as CSV</a>
           <a class="oa-btn" id="reportLink" href="#" target="_blank" rel="noopener">🖨 Printable case report</a>
         </div>
-        <p class="oa-note">The live case link lets police or a search team watch the same leads arrive in real time. The CSV and printable report give them a ranked, sourced summary to act on.</p>
+        <p class="oa-note">The operational link lets police or a search team watch the full leads as they arrive. The family view is a calmer, read-only status page — no raw-lead firehose. The CSV and printable report give a ranked, sourced summary to act on.</p>
       </div>
     </div>
     <div class="panel cc-chat hidden" id="chatPanel">
@@ -465,6 +489,26 @@ async function onPhoto(e){
 function addColor(name){
   const inp=$("clothing"); const parts=inp.value.split(",").map(s=>s.trim()).filter(Boolean);
   if(!parts.some(p=>p.toLowerCase()===name.toLowerCase())){ parts.push(name); inp.value=parts.join(", "); }
+}
+
+// ---- reverse search (report a sighting -> match open cases) ----
+function showIntake(mode){
+  $("intake").classList.toggle("hidden", mode!=="case");
+  $("sighting").classList.toggle("hidden", mode!=="sighting");
+  document.querySelectorAll(".mtab").forEach(t=>t.classList.toggle("on", t.dataset.m===mode));
+}
+async function submitSighting(){
+  const body={location:$("s_location").value, description:$("s_description").value, clothing:$("s_clothing").value, age:$("s_age").value};
+  if(!body.location.trim()&&!body.description.trim()){ $("sightingResults").innerHTML='<div class="iv-empty">Add at least a location or a description.</div>'; return; }
+  $("sightingResults").innerHTML='<div class="iv-empty">Checking open cases…</div>';
+  try{
+    const out=await (await fetch("/api/reverse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json();
+    const m=out.matches||[];
+    if(!m.length){ $("sightingResults").innerHTML=`<div class="iv-empty">No credible match among ${out.checked||0} open case(s). If you believe this is a missing person, report it to the police.</div>`; return; }
+    $("sightingResults").innerHTML=`<div class="s-h">Possible matches (${m.length}) · checked ${out.checked} case(s)</div>`+
+      m.map(x=>`<a class="s-match" href="/?case=${encodeURIComponent(x.case_id)}" target="_blank" rel="noopener"><span class="s-score">${x.score}%</span><span class="s-body"><b>${escHtml(x.name)}</b><span>${escHtml(x.last_seen_location||"")}</span></span><span class="s-open">open ↗</span></a>`).join("")+
+      `<div class="s-note">A match is a lead, not a confirmation. Report any genuine sighting to the police.</div>`;
+  }catch(e){ $("sightingResults").innerHTML='<div class="iv-empty">Lookup failed — try again.</div>'; }
 }
 
 $("launch").onclick=async()=>{
@@ -810,6 +854,11 @@ function shareCase(){ if(!caseId) return; const url=`${location.origin}/?case=${
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(flash,()=>prompt("Copy this link:",url));
   else prompt("Copy this link:",url);
 }
+function shareFamily(){ if(!caseId) return; const url=`${location.origin}/family?case=${caseId}`;
+  const flash=()=>{ const b=$("familyBtn"); if(b){ const o=b.textContent; b.textContent="✓ Link copied"; setTimeout(()=>b.textContent=o,1600); } };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(flash,()=>prompt("Copy this link:",url));
+  else prompt("Copy this link:",url);
+}
 async function loadAuthorities(){ if(_authLoaded||!caseId) return; _authLoaded=true;
   try{ const a=await (await fetch(`/api/case/${caseId}/authorities`)).json();
     $("authorities").innerHTML=`<div class="auth-h">Region · ${escHtml(a.country)}</div>`+
@@ -1056,6 +1105,44 @@ async function refresh(){
   .sr-ring.r2 b{ color:var(--muted); }
   .sr-note{ font-size:12px; color:var(--muted); line-height:1.55; }
   .sr-basis{ font-size:10px; color:var(--faint); line-height:1.5; margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
+
+  /* ---- mode tabs + reverse search ---- */
+  .mode-tabs{ display:flex; gap:6px; margin-bottom:18px; }
+  .mtab{ font-family:var(--mono); font-size:11px; letter-spacing:.5px; color:var(--muted); cursor:pointer;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:9px; padding:8px 14px; transition:.15s; }
+  .mtab:hover{ color:var(--ink); border-color:var(--line-2); }
+  .mtab.on{ color:#0a0d16; background:var(--accent); border-color:transparent; font-weight:600; }
+  .s-results{ margin-top:18px; }
+  .s-h{ font-family:var(--mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin-bottom:11px; }
+  .s-match{ display:flex; align-items:center; gap:13px; padding:12px 14px; margin-bottom:9px; border-radius:11px; text-decoration:none;
+    background:var(--panel-2); border:1px solid var(--line); transition:.15s; }
+  .s-match:hover{ border-color:var(--amber); }
+  .s-score{ font-family:var(--display); font-weight:700; font-size:16px; color:var(--amber); flex:none; width:46px; }
+  .s-body{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .s-body b{ color:var(--ink); font-size:14px; } .s-body span{ color:var(--muted); font-size:11.5px; }
+  .s-open{ font-size:11px; color:var(--cyan); flex:none; }
+  .s-note{ font-size:11px; color:var(--faint); line-height:1.55; margin-top:6px; }
+
+  /* ---- accessibility: visible keyboard focus ---- */
+  a:focus-visible, button:focus-visible, input:focus-visible,
+  .step:focus-visible, .mtab:focus-visible, .oa-btn:focus-visible, .cat:focus-visible{
+    outline:2px solid var(--cyan); outline-offset:2px; }
+
+  /* ---- mobile ---- */
+  @media (max-width:720px){
+    .topbar{ flex-wrap:wrap; height:auto; padding:8px 12px; }
+    .tb-sep{ display:none; }
+    .tb-cell{ min-width:auto; padding:0 10px; }
+    .tb-right{ width:100%; margin-left:0; margin-top:4px; }
+    .stepper{ position:static; overflow-x:auto; padding:8px 12px; }
+    .step{ white-space:nowrap; }
+    main, .page{ padding:10px; }
+    .intake{ padding:22px 18px; margin:2vh auto; }
+    .grid2{ grid-template-columns:1fr; }
+    .mode-tabs{ flex-wrap:wrap; }
+    #map{ min-height:340px; }
+    .sr-rings{ flex-direction:column; }
+  }
 </style>
 </body>
 </html>
