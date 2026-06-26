@@ -27,6 +27,8 @@ import authorities
 import export
 import geo
 import intel
+import places
+import searchmodel
 import settings
 import sources
 import store
@@ -116,6 +118,9 @@ async def run_search(case_id: str) -> None:
         if center:
             child["lat"], child["lng"], child["place"] = center
         case["geocoded"] = center is not None
+        # Grounded statistical search-radius rings (lost-person-behavior data).
+        case["search_model"] = searchmodel.rings(child.get("category", "missing"),
+                                                 child.get("lat"), child.get("lng"))
         store.save(case)
 
         async def run_channel(channel):
@@ -176,6 +181,7 @@ async def start_search(child: ChildIn, request: Request):
         "id": case_id, "child": child.model_dump(), "leads": [],
         "sources_searched": 0, "elapsed_s": 0.0, "done": False,
         "geocoded": False, "diagnostics": [], "intelligence": None, "error": None,
+        "search_model": None, "cctv": None,
     }
     asyncio.create_task(run_search(case_id))
     return {"case_id": case_id}
@@ -243,6 +249,26 @@ async def case_authorities(case_id: str):
     if not case:
         raise HTTPException(404, "case not found")
     return authorities.for_location(case["child"].get("last_seen_location", ""))
+
+
+@app.get("/api/case/{case_id}/cctv")
+async def case_cctv(case_id: str):
+    """Public places that commonly run CCTV near the last-seen point (OpenStreetMap).
+    Lazy + cached — Overpass is slow. Not face recognition, not camera feeds."""
+    case = _get_case(case_id)
+    if not case:
+        raise HTTPException(404, "case not found")
+    child = case["child"]
+    lat, lng = child.get("lat"), child.get("lng")
+    if lat is None or lng is None:
+        raise HTTPException(409, "case is not geolocated yet")
+    if case.get("cctv") is None:
+        case["cctv"] = await places.nearby(lat, lng)
+        if case_id in CASES:
+            store.save(case)
+    return {"places": case["cctv"],
+            "note": "Public places that commonly run CCTV near the last-seen point. Verify on "
+                    "the ground and request any footage through the proper legal channel."}
 
 
 @app.get("/api/case/{case_id}/export.csv")

@@ -308,6 +308,10 @@
         <div class="p-h"><span class="t">Live Leads</span><span class="c" id="feedCount">0 active</span></div>
         <div class="filters" id="filters"></div>
         <div class="feed" id="feed"></div>
+        <div class="cctv-box">
+          <button class="oa-btn" id="cctvBtn" onclick="loadCCTV()">🎥 Find CCTV / footage sources nearby</button>
+          <div class="cctv-list" id="cctvList"></div>
+        </div>
       </aside>
     </div>
   </section>
@@ -357,6 +361,10 @@
           <div id="ivCluster" class="iv-body"></div>
         </div>
       </div>
+    </div>
+    <div class="panel sr hidden" id="srPanel">
+      <div class="p-h"><span class="t">Statistical search radius</span><span class="c">lost-person-behavior model</span></div>
+      <div class="sr-body" id="srBody"></div>
     </div>
   </section>
 
@@ -419,7 +427,7 @@
 const $ = id => document.getElementById(id);
 const FIELDS=["name","age","last_seen_time","last_seen_location","clothing","distinguishing_features"];
 let caseId=null, poll=null, dispCount=0, CATS=[], activeCat="child", feedFilter="all";
-let map=null, heatLayer=null, markerLayer=null, zoneLayer=null, areaLayer=null, lastZone=null, curMax=100;
+let map=null, heatLayer=null, markerLayer=null, zoneLayer=null, areaLayer=null, cctvLayer=null, ringLayer=null, lastZone=null, curMax=100;
 window._fusionByLead={}; window._relevance={};
 
 function showPage(p){
@@ -493,6 +501,7 @@ function initMap(){
   L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     {maxZoom:19, subdomains:"abcd", attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(map);
   markerLayer=L.layerGroup().addTo(map); zoneLayer=L.layerGroup().addTo(map); areaLayer=L.layerGroup().addTo(map);
+  ringLayer=L.layerGroup().addTo(map); cctvLayer=L.layerGroup().addTo(map);
 }
 function hubIcon(){ return L.divIcon({className:"", iconSize:[16,16], iconAnchor:[8,8], html:`<div class="hub"></div>`}); }
 function renderInvestigation(intel){
@@ -525,6 +534,37 @@ function drawAreas(sa, mv){
   }
   if(mv&&mv.path&&mv.path.length>1)
     L.polyline(mv.path.map(p=>[p.lat,p.lng]),{color:"#FFB84D",weight:2,opacity:.7,dashArray:"6 6"}).addTo(areaLayer);
+}
+// ---- statistical search-radius rings (lost-person-behavior model) ----
+function renderSearchModel(c){
+  const sm=c.search_model; if(!sm){ $("srPanel").classList.add("hidden"); return; }
+  $("srPanel").classList.remove("hidden");
+  $("srBody").innerHTML=`<div class="sr-rings">`+sm.rings.map((r,i)=>`<div class="sr-ring r${i}"><b>${r.p}%</b> within <b>${r.km} km</b></div>`).join("")+`</div>`+
+    `<div class="sr-note">${escHtml(sm.note)}</div>`+
+    `<div class="sr-basis">⚠ ${escHtml(sm.basis)}</div>`;
+  drawRings(sm);
+}
+function drawRings(sm){
+  if(!ringLayer||!map) return; ringLayer.clearLayers();
+  const cols=["#FFB84D","#62E8FF","#56657f"];
+  sm.rings.forEach((r,i)=>L.circle(sm.center,{radius:r.km*1000,color:cols[i],weight:1.2,opacity:.55,fill:false,dashArray:i?"4 9":"none"}).addTo(ringLayer));
+}
+// ---- CCTV / footage-source discovery (OpenStreetMap; not face recognition) ----
+function cctvIcon(){ return L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],html:`<div class="cctvm"></div>`}); }
+async function loadCCTV(){
+  if(!caseId) return; const btn=$("cctvBtn");
+  btn.disabled=true; btn.textContent="🎥 Searching OpenStreetMap…";
+  try{
+    const out=await (await fetch(`/api/case/${caseId}/cctv`)).json();
+    const ps=out.places||[];
+    if(!ps.length){ $("cctvList").innerHTML=`<div class="iv-empty">No mapped CCTV-likely places found nearby.</div>`; btn.textContent="🎥 No nearby sources mapped"; }
+    else{
+      $("cctvList").innerHTML=`<div class="cctv-note">${escHtml(out.note||"")}</div>`+ps.slice(0,14).map(p=>`<div class="cctv-row"><span class="cctv-k">${escHtml(p.kind)}</span><span class="cctv-n">${escHtml(p.name)}</span><span class="cctv-d">${p.dist_m} m</span></div>`).join("");
+      if(cctvLayer){ cctvLayer.clearLayers(); ps.forEach(p=>L.marker([p.lat,p.lng],{icon:cctvIcon(),title:`${p.kind}: ${p.name}`}).addTo(cctvLayer)); }
+      btn.textContent=`🎥 ${ps.length} footage sources mapped`;
+    }
+  }catch(e){ btn.textContent="🎥 Lookup failed — try again"; }
+  btn.disabled=false;
 }
 function pulseIcon(k){ return L.divIcon({className:"", iconSize:[16,16], iconAnchor:[8,8],
   html:`<div class="mk mk-${k}"><span class="ring"></span><span class="core"></span></div>`}); }
@@ -643,6 +683,9 @@ function resetOp(){
   $("chatMsgs").innerHTML='<div class="chat-msg ai"><div class="chat-bubble">Commander online. Ask me why a zone was prioritized, what teams should do, or what the evidence shows.</div></div>';
   _authLoaded=false; $("authorities").innerHTML="";
   $("investPanel").classList.add("hidden"); if(areaLayer) areaLayer.clearLayers();
+  if(cctvLayer) cctvLayer.clearLayers(); if(ringLayer) ringLayer.clearLayers();
+  $("srPanel").classList.add("hidden"); $("cctvList").innerHTML="";
+  const cb=$("cctvBtn"); if(cb){ cb.disabled=false; cb.textContent="🎥 Find CCTV / footage sources nearby"; }
   if(history.replaceState) history.replaceState({}, "", location.pathname);
 }
 
@@ -799,6 +842,7 @@ async function refresh(){
   if(c.error){ clearInterval(poll); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete · partial"; $("mapStat").textContent="⚠ "+c.error; }
 
   if(c.intelligence){ renderIntelligence(c.intelligence); renderInvestigation(c.intelligence); }
+  renderSearchModel(c);
   if(c.done) loadAuthorities();
   renderProfile(c.child);
   renderFeed(c);
@@ -987,6 +1031,31 @@ async function refresh(){
   .handoff-panel .ops-actions{ padding:14px 16px 4px; }
   .oa-note{ font-size:11px; color:var(--faint); line-height:1.55; padding:0 16px 14px; margin:6px 0 0; }
   @media (max-width:1180px){ .handoff-grid{ grid-template-columns:1fr; } }
+
+  /* ---- CCTV discovery ---- */
+  .cctv-box{ padding:11px 12px 14px; border-top:1px solid var(--line); }
+  .cctv-list{ margin-top:10px; }
+  .cctv-note{ font-size:10px; color:var(--faint); line-height:1.5; margin-bottom:9px; }
+  .cctv-row{ display:flex; align-items:center; gap:9px; padding:6px 0; border-top:1px solid var(--line); font-size:11.5px; }
+  .cctv-row:first-of-type{ border-top:none; }
+  .cctv-k{ font-family:var(--mono); font-size:9px; letter-spacing:.4px; color:var(--green); background:rgba(70,224,160,.1);
+    border:1px solid rgba(70,224,160,.25); border-radius:5px; padding:2px 6px; flex:none; min-width:84px; text-align:center; }
+  .cctv-n{ flex:1; min-width:0; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cctv-d{ font-family:var(--mono); font-size:10px; color:var(--faint); flex:none; }
+  .cctvm{ width:11px; height:11px; border-radius:3px; background:rgba(70,224,160,.85); border:1px solid #0a0d16;
+    box-shadow:0 0 7px rgba(70,224,160,.7); }
+
+  /* ---- Statistical search radius ---- */
+  .sr{ margin-top:14px; }
+  .sr-body{ padding:14px 16px 16px; }
+  .sr-rings{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:11px; }
+  .sr-ring{ font-size:12.5px; color:var(--ink); padding:8px 13px; border-radius:9px; background:var(--panel-2); border:1px solid var(--line-2); }
+  .sr-ring b{ font-family:var(--mono); }
+  .sr-ring.r0{ border-color:rgba(255,184,77,.4); } .sr-ring.r0 b{ color:var(--amber); }
+  .sr-ring.r1{ border-color:rgba(98,232,255,.35); } .sr-ring.r1 b{ color:var(--cyan); }
+  .sr-ring.r2 b{ color:var(--muted); }
+  .sr-note{ font-size:12px; color:var(--muted); line-height:1.55; }
+  .sr-basis{ font-size:10px; color:var(--faint); line-height:1.5; margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
 </style>
 </body>
 </html>

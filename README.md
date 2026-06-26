@@ -23,7 +23,7 @@ Groq LLM ripped out, then hardened into something that actually ships.
 | Persistence | in-memory only | SQLite — cases survive restarts, **shareable by link** |
 | Handoff | — | official channels + CSV / printable case report |
 | API keys | `WIRE_API_KEY` + `GROQ_API_KEY` | **none** |
-| Hardening | — | retries · rate-limit · validation · logging · 53 tests |
+| Hardening | — | retries · rate-limit · validation · logging · 60 tests |
 
 ---
 
@@ -35,12 +35,12 @@ pip install -r requirements.txt
 python -m uvicorn app:app --port 8000
 ```
 
-Open **http://localhost:8000** → pick a category → **Begin Search Operation**.
+Open **http://localhost:8000** → pick a category → **Start case**.
 No `.env`, no signup, nothing to configure.
 
 ```bash
 LIFELINE_OFFLINE=1 python -m uvicorn app:app   # force the offline demo set (CI / no-wifi stage)
-pytest -q                                        # 53 tests over the whole engine
+pytest -q                                        # 60 tests over the whole engine
 ```
 
 ---
@@ -51,7 +51,7 @@ pytest -q                                        # 53 tests over the whole engin
   map centers and leads plot correctly. Place names resolve via OpenStreetMap
   (cached, rate-limited to OSM policy) with an offline gazetteer fallback.
 - **Shareable live cases** — every search has a URL (`/?case=<id>`). Send it to
-  volunteers or police and they watch the same leads arrive in real time. Cases
+  police or a search team and they watch the same leads arrive in real time. Cases
   persist in SQLite.
 - **Authority handoff** — LifeFind only aggregates *public* signal; it never replaces
   the authorities. It surfaces the right official channels for the case's region
@@ -106,6 +106,22 @@ processed **in memory and never stored**.
 Inferring a person's age or gender from a single photo is bias-prone pseudo-science
 and the kind of overclaim that discredits a serious system, so it is deliberately out.
 
+## Operational search support
+
+Two grounded aids for the people actually searching:
+
+- **Statistical search radius (`searchmodel.py`)** — the empirical distance rings
+  SAR teams use: given the point last seen and the subject category, the radii
+  within which 50 / 75 / 95 % of comparable subjects have *historically* been found
+  (published lost-person-behavior / ISRID data). Drawn on the map. It is **not** a
+  prediction of the individual and **not** an AI guess — the figures are
+  representative and must be calibrated to your region before operational use.
+- **CCTV / footage-source discovery (`places.py`)** — the petrol bunks, ATMs,
+  stations, banks and shops that commonly run CCTV within walking distance of the
+  last-seen point (OpenStreetMap, free, no key). **Not** face recognition and
+  **not** camera feeds — just the list of where to go request footage, so a search
+  team doesn't burn time working it out on the ground.
+
 ## Scoring (`scoring.py`)
 
 ```
@@ -131,13 +147,15 @@ hard-fails). All config is env-driven (`settings.py`).
 | `intel.py` | Deterministic fusion, zones, timeline, chat, plan |
 | `analysis.py` | Corroboration, movement, clustering, search area, contradictions |
 | `vision.py` | Dominant clothing-color extraction from a photo (colors only) |
+| `searchmodel.py` | Statistical search-radius rings (lost-person-behavior) |
+| `places.py` | CCTV / footage-source discovery (OpenStreetMap) |
 | `scoring.py` | Deterministic, explainable scoring + de-dup |
 | `store.py` | SQLite persistence (shareable cases) |
 | `authorities.py` | Region → official channels |
 | `export.py` | CSV + printable case report |
 | `settings.py` | Env-driven configuration |
 | `static/index.html` | Command center UI — no build step |
-| `tests/` | 53 pytest cases (unit + API) |
+| `tests/` | 60 pytest cases (unit + API) |
 
 ### Deploying (Vercel)
 Set `LIFELINE_DB=/tmp/lifefind.db` (serverless filesystems are read-only except `/tmp`).
