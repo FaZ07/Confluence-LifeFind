@@ -18,7 +18,7 @@ import json
 import logging
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import settings
 
@@ -91,7 +91,7 @@ def append(case_id: str, action: str, detail: dict | None = None,
     detail = detail or {}
     with _LOCK:
         prev = _last_hash(case_id)
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        ts = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         h = _digest(prev, ts, actor, action, detail)
         entry = {"ts": ts, "actor": actor, "action": action,
                  "detail": detail, "prev": prev, "hash": h}
