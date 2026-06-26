@@ -464,6 +464,15 @@ function showPage(p){
 fetch("/api/categories").then(r=>r.json()).then(cats=>{ CATS=cats;
   $("cats").innerHTML=cats.map(c=>`<div class="cat" data-key="${c.key}" onclick="selectCat('${c.key}')"><span class="ic">${c.icon}</span>${c.label}</div>`).join("");
   selectCat("child"); });
+
+// serverless (Vercel) runs offline + synchronous; hide the features that need a shared store
+let SV=false;
+fetch("/api/health").then(r=>r.json()).then(h=>{ SV=!!h.sync;
+  if(SV){ $("modeBadge").textContent="DEMO · OFFLINE";
+    ["shareBtn","familyBtn"].forEach(id=>{ const e=$(id); if(e) e.style.display="none"; });
+    document.querySelectorAll('.mtab[data-m="sighting"]').forEach(t=>{ t.style.display="none"; });
+  }
+}).catch(()=>{});
 function catMeta(k){ return CATS.find(c=>c.key===k)||{label:"person",icon:"👤",accent:"#FFB84D"}; }
 function toDateTimePickerValue(v){ return (v||"").trim().replace(" ","T").slice(0,16); }
 function fromDateTimePickerValue(v){ return (v||"").trim().replace("T"," "); }
@@ -513,12 +522,13 @@ async function submitSighting(){
 
 $("launch").onclick=async()=>{
   const child={category:activeCat}; FIELDS.forEach(f=>child[f]=f==="last_seen_time"?fromDateTimePickerValue($(f).value):$(f).value);
-  const {case_id}=await (await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(child)})).json();
-  caseId=case_id; _authLoaded=false; setExportLinks();
+  const resp=await (await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(child)})).json();
+  caseId=resp.case_id||resp.id; _authLoaded=false; setExportLinks();
   $("intake").classList.add("hidden"); $("stepper").classList.remove("hidden"); showPage("map");
   $("sysDot").classList.add("scan"); $("sysState").textContent="Scanning";
   dispCount=0; initMap(); setTimeout(()=>map&&map.invalidateSize(),60);
-  poll=setInterval(refresh,600); refresh();
+  if(resp.done!==undefined){ window._syncCase=resp; refresh(); }   // serverless: full case in one shot
+  else { window._syncCase=null; poll=setInterval(refresh,600); refresh(); }
 };
 
 // ---- helpers ----
@@ -599,7 +609,10 @@ async function loadCCTV(){
   if(!caseId) return; const btn=$("cctvBtn");
   btn.disabled=true; btn.textContent="🎥 Searching OpenStreetMap…";
   try{
-    const out=await (await fetch(`/api/case/${caseId}/cctv`)).json();
+    const ch=((window._lastCase||{}).child)||{};
+    if(SV && ch.lat==null){ $("cctvList").innerHTML='<div class="iv-empty">Case is not geolocated.</div>'; btn.textContent="🎥 Find CCTV / footage sources nearby"; btn.disabled=false; return; }
+    const vurl=SV?`/api/cctv?lat=${ch.lat}&lng=${ch.lng}`:`/api/case/${caseId}/cctv`;
+    const out=await (await fetch(vurl)).json();
     const ps=out.places||[];
     if(!ps.length){ $("cctvList").innerHTML=`<div class="iv-empty">No mapped CCTV-likely places found nearby.</div>`; btn.textContent="🎥 No nearby sources mapped"; }
     else{
@@ -714,7 +727,7 @@ function renderTimeline(leads,zones){
   $("timeline").innerHTML=ev.map(e=>`<div class="tl-row"><div class="tl-time">${e.t}</div><div class="tl-dot ${e.k}"></div><div class="tl-txt">${e.x}</div></div>`).join("");
 }
 function resetOp(){
-  clearInterval(poll); $("stepper").classList.add("hidden");
+  clearInterval(poll); window._syncCase=null; $("stepper").classList.add("hidden");
   ["pageMap","pageAnalysis","pageHandoff"].forEach(p=>$(p).classList.add("hidden"));
   $("intake").classList.remove("hidden");
   // reset the feed filter so a new operation never opens on a stale (e.g. "reviewing") view
@@ -797,7 +810,9 @@ async function sendChat(){
   $("chatMsgs").scrollTop=9999;
   $("chatBtn").disabled=true;
   try{
-    const r=await fetch(`/api/case/${caseId}/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+    const curl=SV?"/api/chat":`/api/case/${caseId}/chat`;
+    const payload=SV?{case:window._lastCase,message:msg}:{message:msg};
+    const r=await fetch(curl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     const {response}=await r.json();
     $("chatMsgs").removeChild(typing);
     appendChatMsg("ai",response);
@@ -822,7 +837,9 @@ async function launchPlan(){
   $("planTeams").innerHTML='<div style="padding:28px 0;text-align:center;font-family:var(--mono);font-size:11px;color:var(--faint)">◈ generating deployment order…</div>';
   $("planMeta").innerHTML=""; $("planBrief").innerHTML="";
   try{
-    const plan=await (await fetch(`/api/case/${caseId}/search-plan`,{method:"POST"})).json();
+    let plan;
+    if(SV){ plan=(window._lastCase||{}).search_plan; if(!plan) throw new Error("no plan"); }
+    else { plan=await (await fetch(`/api/case/${caseId}/search-plan`,{method:"POST"})).json(); }
     renderPlan(plan);
   }catch(e){
     $("planTeams").innerHTML='<div style="padding:24px 0;text-align:center;color:var(--red)">Generation failed — ensure intelligence is ready and try again.</div>';
@@ -846,8 +863,26 @@ function renderPlan(p){
 let _authLoaded=false;
 function setExportLinks(){ if(!caseId) return;
   const cs=$("csvLink"), ds=$("reportLink");
-  if(cs) cs.href=`/api/case/${caseId}/export.csv`;
-  if(ds) ds.href=`/api/case/${caseId}/report`;
+  if(SV){
+    if(cs){ cs.removeAttribute("href"); cs.onclick=(e)=>{ e.preventDefault(); downloadCSV(); }; }
+    if(ds){ ds.removeAttribute("href"); ds.onclick=(e)=>{ e.preventDefault(); openReport(); }; }
+  } else {
+    if(cs){ cs.onclick=null; cs.href=`/api/case/${caseId}/export.csv`; }
+    if(ds){ ds.onclick=null; ds.href=`/api/case/${caseId}/report`; }
+  }
+}
+function downloadCSV(){
+  const c=window._lastCase; if(!c) return;
+  const rows=[["rank","match_score","source","title","date","place","status","url"]];
+  (c.leads||[]).slice().sort((a,b)=>(b.match_score||0)-(a.match_score||0)).forEach((l,i)=>rows.push([i+1,l.match_score,l.source_name,l.title,l.date,l.place,l.status,l.url]));
+  const csv=rows.map(r=>r.map(x=>`"${String(x==null?"":x).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  const a=document.createElement("a"); a.href=url; a.download=`lifefind-${caseId}.csv`; a.click(); URL.revokeObjectURL(url);
+}
+async function openReport(){
+  const c=window._lastCase; if(!c) return;
+  try{ const html=await (await fetch("/api/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({case:c})})).text();
+    const w=window.open(); if(w){ w.document.write(html); w.document.close(); } }catch(e){}
 }
 function shareCase(){ if(!caseId) return; const url=`${location.origin}/?case=${caseId}`;
   const flash=()=>{ const b=$("shareBtn"); if(b){ const o=b.textContent; b.textContent="✓ Link copied"; setTimeout(()=>b.textContent=o,1600); } };
@@ -860,7 +895,9 @@ function shareFamily(){ if(!caseId) return; const url=`${location.origin}/family
   else prompt("Copy this link:",url);
 }
 async function loadAuthorities(){ if(_authLoaded||!caseId) return; _authLoaded=true;
-  try{ const a=await (await fetch(`/api/case/${caseId}/authorities`)).json();
+  try{ const loc=((window._lastCase||{}).child||{}).last_seen_location||"";
+    const aurl=SV?`/api/authorities?location=${encodeURIComponent(loc)}`:`/api/case/${caseId}/authorities`;
+    const a=await (await fetch(aurl)).json();
     $("authorities").innerHTML=`<div class="auth-h">Region · ${escHtml(a.country)}</div>`+
       (a.channels||[]).map(c=>`<div class="auth-row"><div class="auth-n">${escHtml(c.name)}</div><div class="auth-s">${escHtml(c.scope)}</div><div class="auth-meta">${c.phone?`<span class="auth-p">☎ ${escHtml(c.phone)}</span>`:""}${c.url?`<a href="${escHtml(c.url)}" target="_blank" rel="noopener">open ↗</a>`:""}</div></div>`).join("")
       +`<div class="auth-note">${escHtml(a.note||"")}</div>`;
@@ -873,9 +910,13 @@ function openCase(id){ caseId=id; $("intake").classList.add("hidden"); $("steppe
 }
 
 async function refresh(){
-  const resp=await fetch(`/api/case/${caseId}`);
-  if(!resp.ok){ clearInterval(poll); $("sysDot").classList.remove("scan"); $("sysState").textContent="Not found"; $("mapStat").textContent="case not found or expired"; return; }
-  const c=await resp.json();
+  let c;
+  if(window._syncCase){ c=window._syncCase; }
+  else {
+    const resp=await fetch(`/api/case/${caseId}`);
+    if(!resp.ok){ clearInterval(poll); $("sysDot").classList.remove("scan"); $("sysState").textContent="Not found"; $("mapStat").textContent="case not found or expired"; return; }
+    c=await resp.json();
+  }
   // No garbage anywhere: once AI relevance is in, drop anything it scored < 4 — feed, map, zones AND counts.
   const rel=(c.intelligence&&c.intelligence.relevance)||{};
   if(Object.keys(rel).length>0) c.leads=c.leads.filter(l=>(rel[l.id]??10)>=4);

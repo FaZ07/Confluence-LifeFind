@@ -31,7 +31,9 @@ def _f(name: str, default: float) -> float:
 
 
 # --- modes -------------------------------------------------------------
-OFFLINE = _b("LIFELINE_OFFLINE", False)            # force bundled offline data
+ON_VERCEL = bool(os.getenv("VERCEL"))              # serverless: offline + synchronous + no disk
+OFFLINE = _b("LIFELINE_OFFLINE", False) or ON_VERCEL  # force bundled offline data
+SYNC = _b("LIFELINE_SYNC", False) or ON_VERCEL     # run search inline, return full case (no polling)
 LOG_LEVEL = os.getenv("LIFELINE_LOG_LEVEL", "INFO").upper()
 
 # --- outbound HTTP (hardening) -----------------------------------------
@@ -55,7 +57,7 @@ GEOCODE_MAX_LOOKUPS = _i("LIFELINE_GEOCODE_MAX", 12)          # bound live looku
 # --- persistence -------------------------------------------------------
 # Vercel/serverless filesystems are read-only except /tmp; point LIFELINE_DB there.
 DB_PATH = os.getenv("LIFELINE_DB", str(_HERE / "lifefind.db"))
-PERSIST = _b("LIFELINE_PERSIST", True)
+PERSIST = _b("LIFELINE_PERSIST", True) and not ON_VERCEL   # serverless has no writable disk
 CASE_TTL_DAYS = _i("LIFELINE_CASE_TTL_DAYS", 30)
 MAX_ACTIVE_CASES = _i("LIFELINE_MAX_ACTIVE_CASES", 200)   # in-memory cap; older fall back to store
 GEOCODE_CACHE_MAX = _i("LIFELINE_GEOCODE_CACHE_MAX", 5000)

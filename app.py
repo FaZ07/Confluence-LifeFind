@@ -166,7 +166,8 @@ async def run_search(case_id: str) -> None:
                 case["leads"].append(lead)
                 case["leads"] = dedup(case["leads"])
                 accepted += 1
-                await asyncio.sleep(0.18)                  # stream effect
+                if not settings.SYNC:
+                    await asyncio.sleep(0.18)              # stream effect (skipped when synchronous)
             case["diagnostics"].append(
                 {"channel": channel["label"], "query": sources.build_query(channel, child),
                  "status": "done", "leads": accepted})
@@ -175,6 +176,8 @@ async def run_search(case_id: str) -> None:
         # Only the resolved CITY is treated as city-level (specific spot still fuses).
         generics = {gaz["city"]} if gaz.get("city") else set()
         case["intelligence"] = intel.analyze_case(case["leads"], case["child"], generics)
+        cmd = (case["intelligence"] or {}).get("commander") or {}
+        case["search_plan"] = intel.generate_search_plan(case["leads"], case["child"], cmd)
     except Exception as e:  # noqa: BLE001 — never leave a case wedged
         log.exception("run_search failed for %s", case_id)
         case["error"] = f"partial results — {type(e).__name__}"
@@ -209,9 +212,12 @@ async def start_search(child: ChildIn, request: Request):
         "created_at": time.time(),
         "sources_searched": 0, "elapsed_s": 0.0, "done": False,
         "geocoded": False, "diagnostics": [], "intelligence": None, "error": None,
-        "search_model": None, "cctv": None, "filtered": 0,
+        "search_model": None, "cctv": None, "filtered": 0, "search_plan": None,
     }
     _evict_old_cases()
+    if settings.SYNC:                       # serverless: run inline, return the full case
+        await run_search(case_id)
+        return CASES[case_id]
     asyncio.create_task(run_search(case_id))
     return {"case_id": case_id}
 
@@ -357,12 +363,40 @@ async def reverse_search(body: dict, request: Request):
     return {"matches": reverse.match_sighting(sighting, list(cases.values())), "checked": len(cases)}
 
 
+# --- stateless variants (serverless mode keeps the case client-side) ---
+@app.get("/api/authorities")
+async def authorities_stateless(location: str = ""):
+    return authorities.for_location(location)
+
+
+@app.post("/api/chat")
+async def chat_stateless(body: dict):
+    case = body.get("case") or {}
+    message = (body.get("message") or "").strip()[: settings.MAX_FIELD_LEN]
+    if not message:
+        raise HTTPException(422, "message required")
+    return {"response": intel.chat_response(message, case)}
+
+
+@app.post("/api/report")
+async def report_stateless(body: dict):
+    return HTMLResponse(export.case_report_html(body.get("case") or {}))
+
+
+@app.get("/api/cctv")
+async def cctv_stateless(lat: float, lng: float):
+    return {"places": await places.nearby(lat, lng),
+            "note": "Public places that commonly run CCTV near the point. Verify on the "
+                    "ground and request any footage through the proper channel."}
+
+
 @app.get("/api/health")
 async def health():
     return {
         "status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION,
         "offline": settings.OFFLINE, "geocode": settings.GEOCODE_ENABLED,
         "persist": store.enabled(), "active_cases": len(CASES), "vision": True,
+        "sync": settings.SYNC,
         "sources": [c["label"] for c in sources.CHANNELS],
     }
 

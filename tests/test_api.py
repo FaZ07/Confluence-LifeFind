@@ -135,3 +135,22 @@ def test_reverse_search_validation(client):
 def test_family_view_served(client):
     r = client.get("/family")
     assert r.status_code == 200 and "FAMILY" in r.text.upper()
+
+
+def test_stateless_endpoints(client):
+    case = _completed_case("svc01")
+    assert client.get("/api/authorities", params={"location": "Chennai"}).json()["country"] == "IN"
+    chat = client.post("/api/chat", json={"case": case, "message": "why marina beach?"})
+    assert chat.status_code == 200 and "Marina Beach" in chat.json()["response"]
+    rep = client.post("/api/report", json={"case": case})
+    assert rep.status_code == 200 and "MISSING" in rep.text
+
+
+def test_sync_mode_returns_full_case(client, monkeypatch):
+    monkeypatch.setattr(settings, "SYNC", True)
+    r = client.post("/api/search", json={"name": "Aarav Sharma", "category": "child",
+                                         "last_seen_location": "Marina Beach, Chennai",
+                                         "clothing": "red striped t-shirt"})
+    j = r.json()
+    assert r.status_code == 200 and j.get("done") is True
+    assert len(j.get("leads", [])) > 0 and j.get("intelligence") is not None
