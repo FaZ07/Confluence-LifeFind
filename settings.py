@@ -4,6 +4,7 @@ so the app runs with zero configuration but can be tuned/hardened in production.
 """
 from __future__ import annotations
 
+import contextvars
 import os
 from pathlib import Path
 
@@ -31,10 +32,28 @@ def _f(name: str, default: float) -> float:
 
 
 # --- modes -------------------------------------------------------------
-ON_VERCEL = bool(os.getenv("VERCEL"))              # serverless: offline + synchronous + no disk
-OFFLINE = _b("LIFELINE_OFFLINE", False) or ON_VERCEL  # force bundled offline data
-SYNC = _b("LIFELINE_SYNC", False) or ON_VERCEL     # run search inline, return full case (no polling)
+ON_VERCEL = bool(os.getenv("VERCEL"))              # serverless: synchronous + no disk
+# OFFLINE is the DEFAULT data source (bundled demo data). On Vercel it defaults on,
+# but it is overridable PER REQUEST via the Live/Demo toggle (see offline_now() below),
+# so the live site can run real sources without an env change or redeploy.
+OFFLINE = _b("LIFELINE_OFFLINE", ON_VERCEL)
+SYNC = _b("LIFELINE_SYNC", False) or ON_VERCEL     # serverless MUST run inline (a bg task can't survive)
 LOG_LEVEL = os.getenv("LIFELINE_LOG_LEVEL", "INFO").upper()
+
+# Per-request data-source override (Live vs Demo). A ContextVar so the choice flows
+# through the async search without leaking across concurrent cases. None -> OFFLINE default.
+_OFFLINE_CTX: contextvars.ContextVar = contextvars.ContextVar("offline_ctx", default=None)
+
+
+def offline_now() -> bool:
+    """Effective data-source mode for the current request/case."""
+    v = _OFFLINE_CTX.get()
+    return OFFLINE if v is None else bool(v)
+
+
+def use_offline(value: bool | None) -> None:
+    """Set the per-request override (True=demo, False=live, None=use the default)."""
+    _OFFLINE_CTX.set(value)
 
 # --- outbound HTTP (hardening) -----------------------------------------
 REQUEST_TIMEOUT = _f("LIFELINE_HTTP_TIMEOUT", 15.0)
@@ -49,7 +68,7 @@ BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
 # --- geocoding (global) ------------------------------------------------
-GEOCODE_ENABLED = _b("LIFELINE_GEOCODE", True) and not OFFLINE
+GEOCODE_ENABLED = _b("LIFELINE_GEOCODE", True)   # gated per request by offline_now() in geo.geocode
 NOMINATIM_BASE = os.getenv("LIFELINE_NOMINATIM", "https://nominatim.openstreetmap.org/search")
 GEOCODE_MIN_INTERVAL = _f("LIFELINE_GEOCODE_INTERVAL", 1.1)   # OSM policy: <= 1 req/sec
 GEOCODE_MAX_LOOKUPS = _i("LIFELINE_GEOCODE_MAX", 12)          # bound live lookups per case

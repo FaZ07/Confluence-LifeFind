@@ -181,11 +181,24 @@ hard-fails). All config is env-driven (`settings.py`).
 | `static/family.html` | Calm, read-only family view |
 | `tests/` | 81 pytest cases (unit + API) |
 
+### Demo vs Live data — a per-search toggle
+
+The intake has a **Demo / Live** switch. *Demo* serves the bundled offline sample set
+(instant, deterministic — great for a stage or no-wifi). *Live* hits the real public
+sources (Google News · Bing · GDELT · Reddit) + global geocoding. It's a **per-request**
+choice (`live` flag on `/api/search`), so it works on any deploy without an env change —
+including the serverless demo. `LIFELINE_OFFLINE` only sets the *default* the switch
+starts on (on by default on Vercel). Live mode is slower and, on a serverless host's short
+function budget, can occasionally time out — that's the only catch.
+
 ### Deploying
-LifeFind runs a long-lived process (live streaming + SQLite persistence), so deploy it
-as a **stateful service** with a writable volume — Docker, Fly.io, Render, Railway or a
-plain VM. Serverless (Vercel) is **not** recommended: the background search task and the
-in-memory case stream don't survive per-request lambdas.
+LifeFind runs best as a long-lived process (live streaming + SQLite persistence), so for
+the **full** feature set deploy it as a **stateful service** with a writable volume —
+Docker, Fly.io, Render, Railway or a plain VM. Serverless (Vercel) runs a **demo mode**
+(synchronous, no disk): live *data* still works via the toggle, but live streaming and
+**shareable/persisted cases, the family view and reverse search are off** there — those
+need the stateful deploy (a background task and shared store can't survive per-request
+lambdas — no toggle changes that).
 
 ```bash
 docker build -t lifefind .

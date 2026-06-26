@@ -154,3 +154,17 @@ def test_sync_mode_returns_full_case(client, monkeypatch):
     j = r.json()
     assert r.status_code == 200 and j.get("done") is True
     assert len(j.get("leads", [])) > 0 and j.get("intelligence") is not None
+
+
+def test_search_records_data_source_mode(client, monkeypatch):
+    """The Demo/Live toggle (`live` flag) is honoured and the case records which it used.
+    `live: false` forces the bundled demo set — no network — and reports live=False."""
+    monkeypatch.setattr(settings, "SYNC", True)
+    r = client.post("/api/search", json={"name": "Aarav Sharma", "category": "child",
+                                         "last_seen_location": "Marina Beach, Chennai",
+                                         "clothing": "red striped t-shirt", "live": False})
+    j = r.json()
+    assert r.status_code == 200 and j.get("done") is True
+    assert j.get("live") is False
+    assert len(j.get("leads", [])) > 0
+    settings.use_offline(None)   # don't leak the override

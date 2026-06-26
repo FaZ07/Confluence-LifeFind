@@ -98,8 +98,10 @@ class ChildIn(BaseModel):
     last_seen_time: str = ""
     clothing: str = ""
     distinguishing_features: str = ""
+    live: bool | None = None   # data source for this search: True=live, False=demo, None=server default
 
-    @field_validator("*", mode="before")
+    @field_validator("category", "name", "age", "photo_url", "last_seen_location",
+                     "last_seen_time", "clothing", "distinguishing_features", mode="before")
     @classmethod
     def _clean(cls, v):
         # trim + clamp every string field (defends against abuse / runaway input)
@@ -127,11 +129,14 @@ def _get_case(case_id: str) -> dict | None:
     return case
 
 
-async def run_search(case_id: str) -> None:
+async def run_search(case_id: str, offline: bool | None = None) -> None:
     """Background task: geocode, fan out across channels, score, persist.
+    `offline` selects this case's data source (True=demo, False=live, None=default).
     Wrapped end-to-end so any failure still drives the case to a terminal state
     with a valid (possibly empty) intelligence payload — a case can never wedge."""
+    settings.use_offline(offline)                 # per-request Live/Demo source
     case = CASES[case_id]
+    case["live"] = not settings.offline_now()     # record what this case actually used
     child = case["child"]
     started = time.perf_counter()
     gaz: dict = {"center": None, "city": "", "city_coord": None, "places": {}}
@@ -219,10 +224,11 @@ async def start_search(child: ChildIn, request: Request):
         "search_model": None, "cctv": None, "filtered": 0, "search_plan": None,
     }
     _evict_old_cases()
+    offline = settings.OFFLINE if child.live is None else (not child.live)
     if settings.SYNC:                       # serverless: run inline, return the full case
-        await run_search(case_id)
+        await run_search(case_id, offline)
         return CASES[case_id]
-    asyncio.create_task(run_search(case_id))
+    asyncio.create_task(run_search(case_id, offline))
     return {"case_id": case_id}
 
 
@@ -411,7 +417,8 @@ async def cctv_stateless(lat: float, lng: float):
 async def health():
     return {
         "status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION,
-        "offline": settings.OFFLINE, "geocode": settings.GEOCODE_ENABLED,
+        "offline": settings.OFFLINE, "live_default": not settings.OFFLINE,
+        "geocode": settings.GEOCODE_ENABLED and not settings.OFFLINE,
         "persist": store.enabled(), "active_cases": len(CASES), "vision": True,
         "sync": settings.SYNC, "narrate": narrate.enabled(),
         "sources": [c["label"] for c in sources.CHANNELS],

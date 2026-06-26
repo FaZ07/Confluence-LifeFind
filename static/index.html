@@ -259,6 +259,16 @@
     <div class="kicker">Decision support · new case</div>
     <h1 id="formTitle">New case · missing child</h1>
     <p class="sub">LifeFind triages scattered <b>public</b> signal into ranked, corroborated leads — to help families, search teams and the authorities act faster. It assists the people searching; it never replaces the police.</p>
+    <div class="src-toggle" id="srcToggle">
+      <div class="st-info">
+        <span class="st-label">Data source</span>
+        <span class="st-sub" id="stSub">Demo data — instant, bundled sample leads</span>
+      </div>
+      <button type="button" class="st-switch" id="stSwitch" role="switch" aria-checked="false" aria-label="Toggle live data sources" onclick="toggleLive()">
+        <span class="st-text" id="stText">DEMO</span>
+        <span class="st-track"><span class="st-knob"></span></span>
+      </button>
+    </div>
     <label>Subject type</label>
     <div class="cats" id="cats"></div>
     <div class="field"><label>Full name</label><input id="name" /></div>
@@ -467,14 +477,25 @@ fetch("/api/categories").then(r=>r.json()).then(cats=>{ CATS=cats;
   $("cats").innerHTML=cats.map(c=>`<div class="cat" data-key="${c.key}" onclick="selectCat('${c.key}')"><span class="ic">${c.icon}</span>${c.label}</div>`).join("");
   selectCat("child"); });
 
-// serverless (Vercel) runs offline + synchronous; hide the features that need a shared store
-let SV=false;
-fetch("/api/health").then(r=>r.json()).then(h=>{ SV=!!h.sync;
-  if(SV){ $("modeBadge").textContent="DEMO · OFFLINE";
+// serverless (Vercel) runs synchronous + no shared store; hide the features that need one.
+// The Demo/Live data-source toggle works in either mode (it's per-search).
+let SV=false, useLive=false;
+fetch("/api/health").then(r=>r.json()).then(h=>{ SV=!!h.sync; useLive=!!h.live_default; updateSrcToggle();
+  if(SV){
     ["shareBtn","familyBtn"].forEach(id=>{ const e=$(id); if(e) e.style.display="none"; });
     document.querySelectorAll('.mtab[data-m="sighting"]').forEach(t=>{ t.style.display="none"; });
   }
 }).catch(()=>{});
+function toggleLive(){ useLive=!useLive; updateSrcToggle(); }
+function updateSrcToggle(){
+  const sw=$("stSwitch"); if(!sw) return;
+  sw.classList.toggle("on", useLive); sw.setAttribute("aria-checked", String(useLive));
+  $("stText").textContent=useLive?"LIVE":"DEMO";
+  $("stSub").textContent=useLive
+    ? "Live public sources — Google News · Bing · GDELT · Reddit (slower, real results)"
+    : "Demo data — instant, bundled sample leads";
+  const b=$("modeBadge"); if(b){ b.textContent=useLive?"LIVE SOURCES":"DEMO · OFFLINE"; b.classList.toggle("live", useLive); }
+}
 function catMeta(k){ return CATS.find(c=>c.key===k)||{label:"person",icon:"👤",accent:"#FFB84D"}; }
 function toDateTimePickerValue(v){ return (v||"").trim().replace(" ","T").slice(0,16); }
 function fromDateTimePickerValue(v){ return (v||"").trim().replace("T"," "); }
@@ -524,6 +545,7 @@ async function submitSighting(){
 
 $("launch").onclick=async()=>{
   const child={category:activeCat}; FIELDS.forEach(f=>child[f]=f==="last_seen_time"?fromDateTimePickerValue($(f).value):$(f).value);
+  child.live=useLive;   // Demo (bundled) vs Live (real public sources) for this search
   const resp=await (await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(child)})).json();
   caseId=resp.case_id||resp.id; _authLoaded=false; setExportLinks();
   $("intake").classList.add("hidden"); $("stepper").classList.remove("hidden"); showPage("map");
@@ -1213,6 +1235,22 @@ async function refresh(){
   .sr-ring.r2 b{ color:var(--muted); }
   .sr-note{ font-size:12px; color:var(--muted); line-height:1.55; }
   .sr-basis{ font-size:10px; color:var(--faint); line-height:1.5; margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
+
+  /* ---- data-source (Demo / Live) toggle ---- */
+  .src-toggle{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0 0 22px;
+    padding:12px 14px; border-radius:12px; background:var(--panel-2); border:1px solid var(--line); }
+  .st-info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .st-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.4px; color:var(--faint); font-weight:600; }
+  .st-sub{ font-size:11.5px; color:var(--muted); }
+  .st-switch{ display:flex; align-items:center; gap:9px; cursor:pointer; background:transparent; border:none; padding:0; flex:none; }
+  .st-text{ font-family:var(--mono); font-size:10px; letter-spacing:1px; color:var(--faint); width:30px; text-align:right; }
+  .st-switch.on .st-text{ color:var(--green); }
+  .st-track{ position:relative; width:42px; height:23px; border-radius:23px; background:var(--line-2); transition:.18s; flex:none; }
+  .st-knob{ position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:#fff;
+    transition:.18s; box-shadow:0 2px 6px rgba(0,0,0,.4); }
+  .st-switch.on .st-track{ background:var(--green); }
+  .st-switch.on .st-knob{ transform:translateX(19px); }
+  .st-switch:focus-visible .st-track{ outline:2px solid var(--cyan); outline-offset:2px; }
 
   /* ---- mode tabs + reverse search ---- */
   .mode-tabs{ display:flex; gap:6px; margin-bottom:18px; }

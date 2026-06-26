@@ -371,7 +371,7 @@ async def fetch_channel(channel: dict, child: dict) -> tuple[int, list[dict]]:
         1. the channel's own engine
         2. real Google News for this channel's angle (still live data)
         3. the bundled offline set (only on total network loss)."""
-    if settings.OFFLINE:
+    if settings.offline_now():
         return await _fetch_offline(channel, child)
 
     primary = _FETCHERS.get(channel["source"], _fetch_gnews)
