@@ -247,6 +247,73 @@
   .cam-tile.hot{ outline:2px solid #34D399; outline-offset:-2px; }
   @media(max-width:1100px){ .cctv-demo-grid{ grid-template-columns:1fr; } }
 
+  /* footage-source workflow buttons + provenance line */
+  .cctv-card{ flex-wrap:wrap; }
+  .cc-prov{ width:100%; font-family:var(--mono); font-size:10px; color:var(--faint); margin-top:2px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .cc-prov a{ color:var(--primary); text-decoration:none; }
+  .cc-acts{ width:100%; display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
+  .cc-act{ font-size:10px; font-weight:600; padding:5px 9px; border-radius:8px; cursor:pointer; color:var(--muted);
+    background:var(--card-solid); border:1px solid var(--line-2); transition:.13s; }
+  .cc-act:hover{ color:var(--ink); border-color:var(--line-2); }
+  .cc-act.on{ color:#fff; border-color:transparent; }
+  .cc-act.on.s-req{ background:var(--warn); } .cc-act.on.s-rev{ background:var(--primary); }
+  .cc-act.on.s-hit{ background:var(--green); } .cc-act.on.s-no{ background:var(--faint); }
+  .cctv-card.worked{ border-color:var(--line-2); }
+
+  /* ================= TRIAGE (operational layer) ================= */
+  .triage-stack{ display:flex; flex-direction:column; gap:16px; }
+  .tq-empty{ font-size:12px; color:var(--faint); padding:10px 0; }
+  .tlead{ display:flex; gap:13px; align-items:flex-start; padding:14px 0; border-top:1px solid var(--line); }
+  .tlead:first-child{ border-top:none; }
+  .tlead.decided{ opacity:.62; }
+  .tl-conf{ flex:none; width:62px; text-align:center; }
+  .tl-score{ font-family:var(--display); font-weight:700; font-size:20px; line-height:1; }
+  .tl-tier{ font-family:var(--mono); font-size:8px; letter-spacing:.6px; margin-top:3px; padding:2px 0; border-radius:5px; }
+  .tl-tier.strong{ color:var(--primary); } .tl-tier.promising{ color:#0e7490; } .tl-tier.watch{ color:var(--faint); }
+  .tl-main{ flex:1; min-width:0; }
+  .tl-title{ font-size:13px; font-weight:600; line-height:1.4; }
+  .tl-sub{ font-size:11px; color:var(--muted); margin-top:3px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .tl-badge{ font-family:var(--mono); font-size:9px; padding:2px 7px; border-radius:20px; background:var(--card-2); border:1px solid var(--line); color:var(--muted); }
+  .tl-state{ font-family:var(--mono); font-size:9px; padding:2px 8px; border-radius:20px; font-weight:600; }
+  .tl-state.verified{ color:#16a34a; background:rgba(34,197,94,.12); } .tl-state.dismissed{ color:var(--faint); background:var(--card-2); }
+  .tl-state.reviewing{ color:#b45309; background:rgba(245,158,11,.12); } .tl-state.new{ color:var(--primary); background:rgba(37,99,235,.1); }
+  .tl-acts{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .tbtn{ font-size:10.5px; font-weight:600; padding:6px 11px; border-radius:8px; cursor:pointer; border:1px solid var(--line-2); background:var(--card-solid); color:var(--muted); transition:.13s; }
+  .tbtn:hover{ color:var(--ink); }
+  .tbtn.approve:hover{ color:#16a34a; border-color:#16a34a; } .tbtn.approve.on{ background:var(--green); color:#fff; border-color:transparent; }
+  .tbtn.reject:hover{ color:var(--red); border-color:var(--red); } .tbtn.reject.on{ background:var(--red); color:#fff; border-color:transparent; }
+  .tbtn.prov.on{ color:var(--primary); border-color:var(--primary); }
+  .prov-box{ margin-top:11px; padding:13px 14px; border-radius:11px; background:var(--card-2); border:1px solid var(--line); font-size:11.5px; }
+  .prov-h{ font-family:var(--mono); font-size:9px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+  .prov-r{ display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+  .prov-k{ width:96px; flex:none; color:var(--muted); font-size:10.5px; }
+  .prov-bar{ flex:1; height:6px; border-radius:4px; background:rgba(15,23,42,.07); overflow:hidden; }
+  .prov-bar i{ display:block; height:100%; background:var(--grad); border-radius:4px; }
+  .prov-v{ width:54px; flex:none; text-align:right; font-family:var(--mono); font-size:10.5px; color:var(--ink); }
+  .prov-src{ margin-top:9px; padding-top:9px; border-top:1px solid var(--line); font-family:var(--mono); font-size:10px; color:var(--muted); word-break:break-all; }
+  .prov-src a{ color:var(--primary); text-decoration:none; }
+
+  /* entity resolution */
+  .cand{ display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+  .cand:first-child{ border-top:none; }
+  .cand-main{ flex:1; min-width:0; }
+  .cand-pair{ font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .cand-eq{ color:var(--primary); font-family:var(--mono); }
+  .cand-sim{ font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:3px; }
+  .cand-acts{ display:flex; gap:6px; flex:none; }
+  .cand.resolved{ opacity:.5; }
+
+  /* audit trail */
+  .chain-badge{ font-family:var(--mono); font-size:9.5px; padding:4px 10px; border-radius:20px; font-weight:600; }
+  .chain-badge.ok{ color:#16a34a; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.25); }
+  .chain-badge.bad{ color:var(--red); background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.25); }
+  .audit-row{ display:flex; gap:11px; padding:9px 0; border-top:1px solid var(--line); font-size:11.5px; }
+  .audit-row:first-child{ border-top:none; }
+  .audit-ts{ font-family:var(--mono); font-size:9.5px; color:var(--faint); width:118px; flex:none; }
+  .audit-act{ flex:1; min-width:0; color:var(--ink); }
+  .audit-act b{ color:var(--primary); font-weight:600; }
+  .audit-hash{ font-family:var(--mono); font-size:9px; color:var(--faint); flex:none; }
+
   /* ================= GLASS PANEL PRIMITIVE ================= */
   .panel{ background:var(--card); backdrop-filter:blur(20px) saturate(150%); border:1px solid var(--glass-border);
     border-radius:var(--r); box-shadow:var(--shadow); }
@@ -847,7 +914,8 @@
       <button class="nav-item" data-p="overview" data-locked onclick="showPage('overview')" title="Case at a glance: status, the key numbers, priority alert and recent activity."><span class="ni-ic">▦</span><span>Overview</span></button>
       <button class="nav-item" data-p="map" data-locked onclick="showPage('map')" title="Live operations map: lead density, priority zones, search-radius rings and the activity cluster."><span class="ni-ic">◍</span><span>Search Operations</span></button>
       <button class="nav-item" data-p="analysis" data-locked onclick="showPage('analysis')" title="Deterministic intelligence: priority zones, cross-source corroboration, timeline and the entity network."><span class="ni-ic">◈</span><span>Intelligence</span></button>
-      <button class="nav-item" data-p="cctv" data-locked onclick="showPage('cctv')" title="Where to go request CCTV footage near the last-seen point. Real OpenStreetMap sources, plus an optional demo camera view."><span class="ni-ic">🎥</span><span>CCTV Analysis</span></button>
+      <button class="nav-item" data-p="triage" data-locked onclick="showPage('triage')" title="The decision layer: approve or reject each lead, see exactly why it scored what it did (provenance), resolve duplicate entities, and read the tamper-evident audit trail."><span class="ni-ic">⚖</span><span>Triage</span></button>
+      <button class="nav-item" data-p="cctv" data-locked onclick="showPage('cctv')" title="Real public CCTV locations near the last-seen point to request footage from — with a tracked workflow. Not live feeds, not face recognition."><span class="ni-ic">🎥</span><span>CCTV Sources</span></button>
       <button class="nav-item" data-p="handoff" data-locked onclick="showPage('handoff')" title="Hand off to the authorities and export the case (CSV, printable report, share links)."><span class="ni-ic">⤴</span><span>Handoff</span></button>
       <button class="nav-item" data-p="ask" data-locked onclick="showPage('ask')" title="Ask the case in plain language — every answer is computed from this case's scored leads."><span class="ni-ic">✦</span><span>Ask</span></button>
     </nav>
@@ -897,7 +965,7 @@
           <div class="kicker">Aurora Intelligence · new case</div>
           <h1 id="formTitle">New case · missing child</h1>
           <p class="sub">LifeFind triages scattered <b>public</b> signal into ranked, corroborated leads — to help families, search teams and the authorities act faster. It assists the people searching; it never replaces the police.</p>
-          <div class="src-toggle" id="srcToggle" title="ONLINE / OFFLINE switch for this case.&#10;&#10;DEMO (offline): instant bundled sample leads — perfect for a stage or no-wifi. No internet used.&#10;LIVE (online): hits the real public sources (Google News · Bing · GDELT · Reddit) + global geocoding. Slower, and on a serverless host can occasionally time out.&#10;&#10;Set it before you start the case.">
+          <div class="src-toggle" id="srcToggle" title="ONLINE / OFFLINE switch for this case.&#10;&#10;DEMO (offline): instant bundled sample leads — perfect for a stage or no-wifi.&#10;LIVE (online): pulls real public signal — Google News · Bing · GDELT · Reddit — with global geocoding.&#10;&#10;Set it before you start the case.">
             <div class="st-info">
               <span class="st-label">⚡ Data source · online mode</span>
               <span class="st-sub" id="stSub">Demo data — instant, bundled sample leads</span>
@@ -1116,61 +1184,57 @@
        </div>
       </section>
 
+      <!-- ============ TRIAGE (operational decision layer) ============ -->
+      <section id="pageTriage" class="page hidden">
+        <div class="dash-head">
+          <div>
+            <h1>Lead Triage</h1>
+            <div class="dh-sub">Take a messy set of public signals down to the few leads worth acting on — every decision <b>explained</b> and <b>logged</b>.</div>
+          </div>
+          <div class="dh-right">
+            <button class="ico-btn" title="Re-verify the audit chain and refresh the trail." onclick="loadAudit()">⟳</button>
+          </div>
+        </div>
+        <div class="stat-row" id="trStats"></div>
+        <div class="triage-stack">
+          <div class="d-card" id="candCard">
+            <div class="dc-h"><span class="dc-t">⛓ Entity resolution</span><span class="dc-c" id="candC" title="Records that look like the same real-world place or person, found by fuzzy matching. Merge to treat them as one entity; Ignore to keep them separate. Either way it's logged.">candidate links</span></div>
+            <div class="dc-body"><div id="candList"></div></div>
+          </div>
+          <div class="d-card">
+            <div class="dc-h"><span class="dc-t">⚑ Priority queue — decide now</span><span class="dc-c" id="trHiC">—</span></div>
+            <div class="dc-body"><div id="trHigh"></div></div>
+          </div>
+          <div class="d-card">
+            <div class="dc-h"><span class="dc-t">◷ Watchlist — lower confidence</span><span class="dc-c" id="trLoC">—</span></div>
+            <div class="dc-body"><div id="trLow"></div></div>
+          </div>
+          <div class="d-card">
+            <div class="dc-h"><span class="dc-t">▤ Audit trail<span style="font-weight:400;color:var(--faint)"> · who did what, when</span></span><span class="chain-badge ok" id="chainBadge" title="Each event carries a SHA-256 hash of the previous event. If any past record were altered, the chain would not verify.">— </span></div>
+            <div class="dc-body"><div id="auditList"><div class="tq-empty">No actions logged yet. Approve or reject a lead to start the trail.</div></div></div>
+          </div>
+        </div>
+      </section>
+
       <!-- ============ CCTV ANALYSIS ============ -->
       <section id="pageCctv" class="page hidden">
         <div class="dash-head">
           <div>
-            <h1>CCTV Analysis</h1>
-            <div class="dh-sub">Where to go request footage near the last-seen point — plus an optional demo camera wall.</div>
+            <h1>CCTV Footage Sources</h1>
+            <div class="dh-sub">Public cameras within walking distance of the last-seen point — and a tracked workflow to work them.</div>
           </div>
           <div class="dh-right">
-            <div class="seg" style="margin:0">
-              <button class="seg-btn on" id="cctvTabReal" onclick="cctvMode('real')" title="Real, honest output: public places near the last-seen point that commonly run CCTV (OpenStreetMap). These are locations to go request footage — not live feeds.">Footage sources</button>
-              <button class="seg-btn" id="cctvTabDemo" onclick="cctvMode('demo')" title="A simulated camera wall for stage demos — clearly marked, and NOT real detection.">Demo camera wall</button>
-            </div>
+            <button class="dc-link" id="cctvBtn" onclick="loadCCTV()" style="font-size:13px" title="Query OpenStreetMap for petrol bunks, ATMs, stations, banks and shops likely to have CCTV near the last-seen point.">⟳ Find sources</button>
           </div>
         </div>
-
-        <!-- REAL: footage-source discovery -->
-        <div id="cctvReal">
-          <div class="cctv-honest">
-            <span class="ch-ic">ⓘ</span>
-            <div><b>Not live feeds, and not face recognition.</b> LifeFind lists public places that commonly run CCTV within walking distance of the last-seen point, so a search team knows where to go and request footage through the proper legal channel.</div>
-          </div>
-          <div class="stat-row" id="cctvStats"></div>
-          <div class="d-card">
-            <div class="dc-h"><span class="dc-t">🎥 Nearby footage sources</span>
-              <button class="dc-link" id="cctvBtn" onclick="loadCCTV()" title="Query OpenStreetMap for petrol bunks, ATMs, stations, banks and shops likely to have CCTV near the last-seen point.">Find sources →</button></div>
-            <div class="dc-body"><div class="cctv-grid" id="cctvGrid"><div class="dash-empty">Tap “Find sources” to map petrol bunks, ATMs, stations, banks and shops likely to have CCTV near the last-seen point. They also drop as pins on the Operations map.</div></div></div>
-          </div>
+        <div class="cctv-honest">
+          <span class="ch-ic">ⓘ</span>
+          <div><b>Real data — not live feeds, not face recognition.</b> Every entry is a real public place from OpenStreetMap likely to run CCTV near the last-seen point. Use the buttons to log how each one was worked — requesting and reviewing footage through the proper legal channel. The workflow is recorded to the case audit trail.</div>
         </div>
-
-        <!-- DEMO: simulated camera wall (clearly labelled) -->
-        <div id="cctvDemo" class="hidden">
-          <div class="demo-banner">⚠ <b>DEMO · SIMULATED.</b> This camera wall and the detection overlay are mock visuals for presentations only. LifeFind does <b>not</b> ingest camera feeds or run face / person recognition — the real tool finds <i>where</i> to request footage (see “Footage sources”).</div>
-          <div class="cctv-demo-grid">
-            <div class="d-card">
-              <div class="dc-h"><span class="dc-t">AI analysis<span class="sim-badge">simulated</span></span><span class="dc-c" id="camMainName">cam · 03:46:12</span></div>
-              <div class="cam-stage">
-                <div class="cam-meta" id="camMainMeta">CAM-01 · Beach Road</div>
-                <div class="cam-rec"><i></i>REC</div>
-                <div class="cam-scan"></div>
-                <div class="cam-box"><span class="cam-tag">person · matches described clothing · 92%</span></div>
-              </div>
-              <div class="cam-controls">
-                <span class="cam-ctl on">◉ Person</span>
-                <span class="cam-ctl on">◉ Clothing match</span>
-                <span class="cam-ctl">○ Vehicle</span>
-                <span class="cam-ctl on">◉ Child</span>
-                <span class="cam-ctl">⏯ Playback</span>
-                <span class="cam-ctl">⬇ Export clip</span>
-              </div>
-            </div>
-            <div class="d-card">
-              <div class="dc-h"><span class="dc-t">Camera wall</span><span class="dc-c">6 simulated feeds</span></div>
-              <div class="dc-body"><div class="cam-wall" id="camWall"></div></div>
-            </div>
-          </div>
+        <div class="stat-row" id="cctvStats"></div>
+        <div class="d-card">
+          <div class="dc-h"><span class="dc-t">🎥 Footage sources to work</span><span class="dc-c" id="cctvProg">—</span></div>
+          <div class="dc-body"><div class="cctv-grid" id="cctvGrid"><div class="dash-empty">Tap “Find sources” to map petrol bunks, ATMs, stations, banks and shops likely to have CCTV near the last-seen point. They also drop as pins on the Operations map.</div></div></div>
         </div>
       </section>
 
@@ -1267,7 +1331,7 @@ window._fusionByLead={}; window._relevance={};
 // Aurora-harmonious per-category accents (keeps the theme cohesive; one gradient discipline)
 const ACCENTS={ child:"#2563EB", dementia:"#06B6D4", disaster:"#3B82F6", tourist:"#22C55E", missing:"#8B5CF6" };
 
-const PAGES={ intake:"intakeWrap", overview:"pageOverview", map:"pageMap", analysis:"pageAnalysis", cctv:"pageCctv", handoff:"pageHandoff", ask:"pageAsk" };
+const PAGES={ intake:"intakeWrap", overview:"pageOverview", map:"pageMap", analysis:"pageAnalysis", triage:"pageTriage", cctv:"pageCctv", handoff:"pageHandoff", ask:"pageAsk" };
 function navLocked(){ const s=$("sidebar"); return s && s.classList.contains("locked"); }
 function lockNav(){ const s=$("sidebar"); if(s) s.classList.add("locked"); }
 function unlockNav(){ const s=$("sidebar"); if(s) s.classList.remove("locked"); }
@@ -1283,6 +1347,7 @@ function showPage(p){
   if(p==="intake") showIntake(intakeMode);
   if(p==="map"&&map) setTimeout(()=>{ map.invalidateSize();
     if(window._lastCase) updateMap(window._lastCase.leads, window._lastCase.child); },60);
+  if(p==="triage") loadAudit();
   window.scrollTo(0,0);
 }
 function intakeSeg(s){
@@ -1318,7 +1383,7 @@ function updateSrcToggle(){
   sw.classList.toggle("on", useLive); sw.setAttribute("aria-checked", String(useLive));
   $("stText").textContent=useLive?"LIVE":"DEMO";
   $("stSub").textContent=useLive
-    ? "Live public sources — Google News · Bing · GDELT · Reddit (slower, real results)"
+    ? "Live — real public signal: Google News · Bing · GDELT · Reddit"
     : "Demo data — instant, bundled sample leads";
   const st=$("srcToggle"); if(st) st.classList.toggle("online", useLive);
   const b=$("modeBadge"); if(b){ b.textContent=useLive?"LIVE · ONLINE":"DEMO · OFFLINE"; b.classList.toggle("live", useLive); }
@@ -1582,6 +1647,11 @@ function renderGraph(g){
 // ---- CCTV / footage-source discovery (OpenStreetMap; not face recognition) ----
 function cctvIcon(){ return L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],html:`<div class="cctvm"></div>`}); }
 const CCTV_ICON={"Petrol bunk":"⛽","ATM":"🏧","Bank":"🏦","Railway station":"🚉","Bus station":"🚌","Public camera":"🎥","Supermarket":"🛒","Shopping mall":"🏬","Market":"🏪"};
+const CC_STATUS=[["req","Requested","s-req"],["rev","Reviewed","s-rev"],["hit","Footage hit ★","s-hit"],["no","Nothing","s-no"]];
+let _cctvStatus={};
+function cctvKey(p){ return (p.name||p.kind)+"@"+(p.lat||0).toFixed(4)+","+(p.lng||0).toFixed(4); }
+function loadCctvStatus(){ try{ _cctvStatus=JSON.parse(localStorage.getItem("cctv:"+caseId)||"{}"); }catch(e){ _cctvStatus={}; } }
+function saveCctvStatus(){ try{ localStorage.setItem("cctv:"+caseId, JSON.stringify(_cctvStatus)); }catch(e){} }
 async function loadCCTV(){
   if(!caseId) return; const btn=$("cctvBtn"), grid=$("cctvGrid");
   btn.disabled=true; btn.textContent="Searching…";
@@ -1592,18 +1662,35 @@ async function loadCCTV(){
     const vurl=SV?`/api/cctv?lat=${ch.lat}&lng=${ch.lng}`:`/api/case/${caseId}/cctv`;
     const out=await (await fetch(vurl)).json();
     const ps=out.places||[];
-    renderCctvStats(ps,ch);
-    if(!ps.length){ grid.innerHTML='<div class="dash-empty">No mapped CCTV-likely places found within walking distance. On the ground, check nearby petrol bunks, ATMs and shops directly.</div>'; }
-    else{
-      grid.innerHTML=ps.slice(0,24).map(p=>`<div class="cctv-card"><div class="cc-ic">${CCTV_ICON[p.kind]||"📍"}</div>
-        <div class="cc-main"><div class="cc-n">${escHtml(p.name)}</div><div class="cc-k">${escHtml(p.kind)} · request footage</div></div>
-        <div class="cc-d"><b>${p.dist_m}</b>m</div></div>`).join("");
-      if(cctvLayer){ cctvLayer.clearLayers(); ps.forEach(p=>L.marker([p.lat,p.lng],{icon:cctvIcon(),title:`${p.kind}: ${p.name}`}).addTo(cctvLayer)); }
-    }
+    window._cctvPlaces=ps; loadCctvStatus(); renderCctvStats(ps,ch); renderCctvGrid();
+    if(ps.length && cctvLayer){ cctvLayer.clearLayers(); ps.forEach(p=>L.marker([p.lat,p.lng],{icon:cctvIcon(),title:`${p.kind}: ${p.name}`}).addTo(cctvLayer)); }
     btn.textContent=ps.length?`${ps.length} sources ✓`:"Retry →";
   }catch(e){ grid.innerHTML='<div class="dash-empty">Lookup failed (the OpenStreetMap mirror may be busy). Try again in a moment.</div>'; btn.textContent="Retry →"; }
   btn.disabled=false;
 }
+function renderCctvGrid(){
+  const ps=window._cctvPlaces||[], grid=$("cctvGrid"); if(!grid) return;
+  if(!ps.length){ grid.innerHTML='<div class="dash-empty">No mapped CCTV-likely places found within walking distance. On the ground, check nearby petrol bunks, ATMs and shops directly.</div>'; cctvProgress(); return; }
+  grid.innerHTML=ps.slice(0,24).map((p,i)=>{
+    const st=_cctvStatus[cctvKey(p)];
+    const maps=`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+    const acts=CC_STATUS.map(([code,lbl,cls])=>`<span class="cc-act ${cls} ${st===code?"on":""}" onclick="setCctvStatus(${i},'${code}')">${escHtml(lbl)}</span>`).join("");
+    return `<div class="cctv-card ${st?"worked":""}"><div class="cc-ic">${CCTV_ICON[p.kind]||"📍"}</div>
+      <div class="cc-main"><div class="cc-n">${escHtml(p.name)}</div><div class="cc-k">${escHtml(p.kind)}</div></div>
+      <div class="cc-d"><b>${p.dist_m}</b>m</div>
+      <div class="cc-prov">📍 ${(+p.lat).toFixed(4)}, ${(+p.lng).toFixed(4)} · <a href="${maps}" target="_blank" rel="noopener">open in Maps ↗</a> · source: OpenStreetMap</div>
+      <div class="cc-acts">${acts}</div></div>`;
+  }).join("");
+  cctvProgress();
+}
+function setCctvStatus(i,code){
+  const p=(window._cctvPlaces||[])[i]; if(!p) return; const k=cctvKey(p);
+  _cctvStatus[k]=(_cctvStatus[k]===code)?undefined:code; saveCctvStatus(); renderCctvGrid();
+  if(_cctvStatus[k]){ const lbl=(CC_STATUS.find(x=>x[0]===code)||[])[1]||code;
+    postAudit("cctv_source",{source:p.name,kind:p.kind,dist_m:p.dist_m,status:lbl}); }
+}
+function cctvProgress(){ const ps=window._cctvPlaces||[]; const worked=ps.filter(p=>_cctvStatus[cctvKey(p)]).length;
+  const e=$("cctvProg"); if(e) e.textContent=ps.length?`${worked} of ${ps.length} worked`:"—"; }
 function renderCctvStats(ps,ch){
   const n=ps?ps.length:0, nearest=ps&&ps.length?Math.min(...ps.map(p=>p.dist_m)):null;
   const kinds=ps?new Set(ps.map(p=>p.kind)).size:0;
@@ -1616,19 +1703,6 @@ function renderCctvStats(ps,ch){
   ];
   $("cctvStats").innerHTML=stats.map(s=>{const big=String(s.val).length>8;return `<div class="stat"><div class="s-top"><div class="s-ic ${s.b}">${s.ic}</div></div>
     <div class="s-val" style="font-size:${big?'17px':'30px'}">${escHtml(String(s.val))}</div><div class="s-lab">${s.lab}</div><div class="s-sub">${s.sub}</div></div>`;}).join("");
-}
-function cctvMode(m){
-  const real=m==="real";
-  $("cctvReal").classList.toggle("hidden",!real);
-  $("cctvDemo").classList.toggle("hidden",real);
-  $("cctvTabReal").classList.toggle("on",real);
-  $("cctvTabDemo").classList.toggle("on",!real);
-  if(!real) buildCamWall();
-}
-function buildCamWall(){
-  const wall=$("camWall"); if(!wall||wall.dataset.built) return; wall.dataset.built="1";
-  const names=["Beach Road","Light House","Food Court","Parking","Main Gate","Back Area"];
-  wall.innerHTML=names.map((n,i)=>`<div class="cam-tile${i===0?" hot":""}"><div class="ct-grid"></div><div class="ct-live"><i></i>LIVE</div><div class="ct-name">CAM-0${i+1} · ${n}</div></div>`).join("");
 }
 function pulseIcon(k){ return L.divIcon({className:"", iconSize:[16,16], iconAnchor:[8,8],
   html:`<div class="mk mk-${k}"><span class="ring"></span><span class="core"></span></div>`}); }
@@ -1778,6 +1852,109 @@ function renderOverview(c,zones){
   ];
   $("ovTiles").innerHTML=tiles.map(t=>`<div class="mtile"><div class="mt-v">${escHtml(String(t.v))}</div><div class="mt-k">${escHtml(t.k)}</div></div>`).join("");
 }
+
+// ============================================================
+//  TRIAGE — the operational decision layer (HITL + provenance
+//  + entity resolution + tamper-evident audit trail).
+// ============================================================
+function renderTriage(c,zones){
+  if(!$("trStats")) return;
+  const leads=c.leads||[];
+  const approved=leads.filter(l=>l.status==="verified").length;
+  const pending=leads.filter(l=>l.status!=="verified"&&l.status!=="dismissed").length;
+  const high=leads.filter(l=>tier(l.match_score).k!=="watch").sort((a,b)=>b.match_score-a.match_score);
+  const low=leads.filter(l=>tier(l.match_score).k==="watch").sort((a,b)=>b.match_score-a.match_score);
+  $("trStats").innerHTML=[
+    {ic:"⚑",b:"b1",val:leads.length,lab:"Leads in queue",sub:"public signals scored"},
+    {ic:"⏳",b:"b3",val:pending,lab:"Awaiting decision",sub:"need analyst review"},
+    {ic:"✓",b:"b4",val:approved,lab:"Approved",sub:"promoted to verified"},
+    {ic:"▤",b:"b2",val:(window._auditCount||0),lab:"Audit events",sub:"actions logged"},
+  ].map(s=>`<div class="stat"><div class="s-top"><div class="s-ic ${s.b}">${s.ic}</div></div><div class="s-val">${escHtml(String(s.val))}</div><div class="s-lab">${s.lab}</div><div class="s-sub">${escHtml(s.sub)}</div></div>`).join("");
+  $("trHigh").innerHTML=high.length?high.map(tlead).join(""):'<div class="tq-empty">No high-confidence leads yet.</div>';
+  $("trLow").innerHTML=low.length?low.map(tlead).join(""):'<div class="tq-empty">Nothing on the watchlist.</div>';
+  $("trHiC").textContent=high.length+" leads"; $("trLoC").textContent=low.length+" leads";
+  renderCandidates(c);
+}
+function tlead(l){
+  const tg=tier(l.match_score); const decided=(l.status==="verified"||l.status==="dismissed");
+  const stateLbl={new:"new",reviewing:"reviewing",verified:"approved",dismissed:"rejected"}[l.status]||l.status;
+  return `<div class="tlead ${decided?"decided":""}">
+    <div class="tl-conf"><div class="tl-score">${l.match_score}</div><div class="tl-tier ${tg.k}">${tg.label}</div></div>
+    <div class="tl-main">
+      <div class="tl-title">${escHtml(l.title||l.source_name||"Lead")}</div>
+      <div class="tl-sub"><span class="tl-badge">${escHtml(l.source_name||"source")}</span>${l.place?`<span class="tl-badge">📍 ${escHtml(l.place)}</span>`:""}<span class="tl-state ${l.status}">${escHtml(stateLbl)}</span></div>
+      <div class="tl-acts">
+        <button class="tbtn approve ${l.status==="verified"?"on":""}" onclick="decideLead('${l.id}','verified')" title="Confirm this lead — promotes it to Verified and writes an audit event.">✓ Approve</button>
+        <button class="tbtn reject ${l.status==="dismissed"?"on":""}" onclick="decideLead('${l.id}','dismissed')" title="Dismiss this lead — writes an audit event.">✕ Reject</button>
+        <button class="tbtn prov" onclick="toggleProv('${l.id}',this)" title="Show exactly how this lead's score was computed and where it came from.">⌕ Why this score</button>
+      </div>
+      <div class="prov-box hidden" id="prov-${l.id}">${provHtml(l)}</div>
+    </div></div>`;
+}
+function provHtml(l){
+  const b=l.breakdown||{}; const order=[["source","Source weight"],["location","Location match"],["clothing","Clothing match"],["recency","Recency"],["name","Name match"]];
+  const rows=order.map(([k,lab])=>{ const x=b[k]; if(!x) return ""; const pct=x.max?Math.round(100*x.got/x.max):0;
+    return `<div class="prov-r"><span class="prov-k">${lab}</span><span class="prov-bar"><i style="width:${pct}%"></i></span><span class="prov-v">+${x.got}/${x.max}</span></div>`; }).join("");
+  const src=l.url?`<a href="${escHtml(l.url)}" target="_blank" rel="noopener">${escHtml(l.url)}</a>`:"(no source URL)";
+  return `<div class="prov-h">Why this lead scored ${l.match_score} — deterministic, no black box</div>${rows||"<div class='prov-r'>Recency &amp; source signal</div>"}<div class="prov-src">↳ ${escHtml(l.source_name||"source")} · reported ${escHtml(l.date||"—")}<br>${src}</div>`;
+}
+function toggleProv(id,btn){ const box=$("prov-"+id); if(!box) return; const open=(box.classList.toggle("hidden")===false); if(btn) btn.classList.toggle("on",open); }
+async function decideLead(id,status){
+  try{ await fetch(`/api/case/${caseId}/lead/${id}/status`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})}); }catch(e){}
+  await loadAudit(); refresh();
+}
+// ---- tamper-evident audit trail ----
+async function loadAudit(){ if(!caseId) return;
+  try{ const a=await (await fetch(`/api/case/${caseId}/audit`)).json();
+    window._auditCount=(a.events||[]).length;
+    const ac=document.querySelector("#trStats .stat:last-child .s-val"); if(ac) ac.textContent=window._auditCount;
+    const badge=$("chainBadge"), v=a.verify||{};
+    if(badge){ badge.className="chain-badge "+(v.intact?"ok":"bad"); badge.textContent=v.intact?`chain verified · ${v.count} events`:`chain broken @ ${v.broken_at}`; }
+    const list=$("auditList");
+    if(list){ const ev=(a.events||[]).slice().reverse();
+      list.innerHTML=ev.length?ev.map(e=>`<div class="audit-row"><span class="audit-ts">${escHtml(e.ts)}</span><span class="audit-act">${auditText(e)}</span><span class="audit-hash">${escHtml((e.hash||"").slice(0,8))}</span></div>`).join(""):'<div class="tq-empty">No actions logged yet. Approve or reject a lead to start the trail.</div>'; }
+  }catch(e){}
+}
+function auditText(e){ const d=e.detail||{};
+  if(e.action==="lead_status") return `<b>${escHtml(d.to)}</b> lead — ${escHtml(d.source||"")}${d.place?" · "+escHtml(d.place):""}`;
+  if(e.action==="cctv_source") return `CCTV <b>${escHtml(d.status||"")}</b> — ${escHtml(d.source||"")} (${escHtml(String(d.dist_m||"?"))}m)`;
+  if(e.action==="entity_merge") return `merged entity — <b>${escHtml(d.a||"")}</b> ≈ ${escHtml(d.b||"")}`;
+  if(e.action==="entity_ignore") return `kept separate — ${escHtml(d.a||"")} / ${escHtml(d.b||"")}`;
+  return `<b>${escHtml(e.action)}</b>`;
+}
+async function postAudit(action,detail){ if(!caseId) return;
+  try{ await fetch(`/api/case/${caseId}/audit`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,detail})});
+    if($("pageTriage") && !$("pageTriage").classList.contains("hidden")) loadAudit(); }catch(e){} }
+// ---- entity resolution: fuzzy candidate links across referenced places ----
+function lev(a,b){ a=a.toLowerCase(); b=b.toLowerCase(); const m=a.length,n=b.length; if(!m)return n; if(!n)return m;
+  let prev=[...Array(n+1).keys()], cur=new Array(n+1);
+  for(let i=1;i<=m;i++){ cur[0]=i; for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); } const t=prev; prev=cur; cur=t; }
+  return prev[n]; }
+function sim(a,b){ const d=lev(a,b), mx=Math.max(a.length,b.length)||1; return 1-d/mx; }
+function entityCandidates(c){
+  const places=[...new Set((c.leads||[]).map(l=>l.place).filter(Boolean))], out=[];
+  for(let i=0;i<places.length;i++) for(let j=i+1;j<places.length;j++){
+    const s=sim(places[i],places[j]); if(s>=0.6 && s<1) out.push({a:places[i],b:places[j],sim:s,kind:"location"});
+  }
+  return out.sort((x,y)=>y.sim-x.sim).slice(0,6);
+}
+let _entityResolved={};
+function renderCandidates(c){
+  const cand=entityCandidates(c).filter(x=>!_entityResolved[x.a+"|"+x.b]);
+  const el=$("candList"); if(!el) return;
+  $("candC").textContent=cand.length?cand.length+" candidate link"+(cand.length>1?"s":""):"none found";
+  el.innerHTML=cand.length?cand.map((x,i)=>`<div class="cand"><div class="cand-main">
+    <div class="cand-pair">${escHtml(x.a)} <span class="cand-eq">≈</span> ${escHtml(x.b)}</div>
+    <div class="cand-sim">${escHtml(x.kind)} · ${Math.round(x.sim*100)}% string similarity — likely the same place</div></div>
+    <div class="cand-acts"><button class="tbtn approve" onclick="resolveEntity(${i},'merge')" title="Treat these as one real-world entity. Logged to the audit trail.">Merge</button><button class="tbtn" onclick="resolveEntity(${i},'ignore')" title="Keep them separate. Logged to the audit trail.">Ignore</button></div></div>`).join("")
+    :'<div class="tq-empty">No duplicate entities detected — the referenced locations are distinct.</div>';
+  window._candCache=cand;
+}
+function resolveEntity(i,act){ const x=(window._candCache||[])[i]; if(!x) return;
+  _entityResolved[x.a+"|"+x.b]=act;
+  postAudit(act==="merge"?"entity_merge":"entity_ignore",{a:x.a,b:x.b,sim:Math.round(x.sim*100)});
+  if(window._lastCase) renderCandidates(window._lastCase);
+}
 function buildZones(leads){ const z={};
   leads.forEach(l=>{ const p=l.place||"Unknown"; (z[p]=z[p]||{place:p,count:0,total:0,max:0,lat:0,lng:0}); z[p].count++; z[p].total+=l.match_score; z[p].max=Math.max(z[p].max,l.match_score); z[p].lat+=l.lat||0; z[p].lng+=l.lng||0; });
   return Object.values(z).map(o=>({...o,lat:o.lat/o.count,lng:o.lng/o.count})).sort((a,b)=>b.total-a.total).slice(0,4);
@@ -1820,8 +1997,13 @@ function resetOp(){
   if(cctvLayer) cctvLayer.clearLayers(); if(ringLayer) ringLayer.clearLayers();
   $("srPanel").classList.add("hidden");
   const cg=$("cctvGrid"); if(cg) cg.innerHTML='<div class="dash-empty">Tap “Find sources” to map nearby places likely to have CCTV.</div>';
-  const cs=$("cctvStats"); if(cs) cs.innerHTML=""; cctvMode("real");
-  const cw=$("camWall"); if(cw){ cw.innerHTML=""; cw.removeAttribute("data-built"); }
+  const cs=$("cctvStats"); if(cs) cs.innerHTML="";
+  window._cctvPlaces=[]; _cctvStatus={}; const cp=$("cctvProg"); if(cp) cp.textContent="—";
+  // reset triage + entity resolution + audit view
+  _entityResolved={}; window._auditCount=0; window._candCache=[];
+  ["pageTriage"].forEach(p=>{ const e=$(p); if(e) e.classList.add("hidden"); });
+  const al=$("auditList"); if(al) al.innerHTML='<div class="tq-empty">No actions logged yet. Approve or reject a lead to start the trail.</div>';
+  const cl=$("candList"); if(cl) cl.innerHTML="";
   $("graphPanel").classList.add("hidden"); $("pipelinePanel").classList.add("hidden");
   const sp=$("scanPanel"); if(sp){ sp.classList.add("hidden"); sp.classList.remove("fade"); sp.removeAttribute("data-built"); sp.innerHTML=""; }
   // decision-engine: drop the control bar, undo any simulation, end any replay
@@ -2031,6 +2213,7 @@ async function refresh(){
   updateMap(c.leads,c.child);
   const zones=buildZones(c.leads); renderZones(zones);
   renderOverview(c,zones);
+  renderTriage(c,zones);
   if(!c.intelligence||!(c.intelligence.timeline||[]).length) renderTimeline(c.leads,zones);
 
   // judge moment: priority verdict + map ring once we have signal

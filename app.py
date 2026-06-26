@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
+import audit
 import authorities
 import export
 import geo
@@ -74,6 +75,7 @@ def _rate_ok(client: str) -> bool:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     store.init()
+    audit.init()
     removed = store.purge_expired()
     if removed:
         log.info("purged %d expired cases", removed)
@@ -251,13 +253,38 @@ async def set_lead_status(case_id: str, lead_id: str, body: dict):
     if not case:
         raise HTTPException(404, "case not found")
     status = (body.get("status") or "new")[:20]
+    actor = (body.get("actor") or "analyst")[:40]
     for lead in case["leads"]:
         if lead["id"] == lead_id:
+            prev = lead.get("status", "new")
             lead["status"] = status
             if case_id not in CASES:
                 store.save(case)   # restored-from-disk case: persist the change
+            # HITL decision → immutable audit event
+            audit.append(case_id, "lead_status", {
+                "lead_id": lead_id, "from": prev, "to": status,
+                "source": lead.get("source_name"), "place": lead.get("place"),
+                "title": (lead.get("title") or "")[:140], "score": lead.get("match_score"),
+            }, actor=actor)
             return {"ok": True}
     raise HTTPException(404, "lead not found")
+
+
+@app.get("/api/case/{case_id}/audit")
+async def get_audit(case_id: str):
+    """The case's append-only, hash-chained action log (+ chain verification)."""
+    return {"events": audit.events(case_id), "verify": audit.verify(case_id)}
+
+
+@app.post("/api/case/{case_id}/audit")
+async def post_audit(case_id: str, body: dict):
+    """Record an analyst action (footage-source worked, entities merged, report filed…)."""
+    action = (body.get("action") or "").strip()[:40]
+    if not action:
+        raise HTTPException(422, "action required")
+    detail = body.get("detail") if isinstance(body.get("detail"), dict) else {}
+    actor = (body.get("actor") or "analyst")[:40]
+    return audit.append(case_id, action, detail, actor=actor)
 
 
 @app.get("/api/categories")

@@ -21,7 +21,7 @@ _COUNTRY_KEYWORDS = {
 
 _CHANNELS: dict[str, list[dict]] = {
     "IN": [
-        {"name": "Emergency (Police)", "scope": "Immediate danger", "phone": "112", "url": ""},
+        {"name": "Police", "scope": "Immediate danger", "phone": "100", "url": ""},
         {"name": "Childline India", "scope": "Missing / at-risk child", "phone": "1098",
          "url": "https://www.childlineindia.org"},
         {"name": "TrackChild / Khoya-Paya", "scope": "National missing-child portal", "phone": "",
