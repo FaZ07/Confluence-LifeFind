@@ -109,7 +109,7 @@ def test_completed_case_read_endpoints(client):
     assert client.get(f"/api/case/{cid}/authorities").json()["country"] == "IN"
     csv = client.get(f"/api/case/{cid}/export.csv")
     assert csv.status_code == 200 and "match_score" in csv.text
-    assert "MISSING" in client.get(f"/api/case/{cid}/dossier").text
+    assert "MISSING" in client.get(f"/api/case/{cid}/report").text
 
 
 def test_lead_status_update_and_chat_validation(client):

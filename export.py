@@ -1,6 +1,6 @@
 """
 LifeFind — export. Turn a live case into something you can hand to the authorities:
-a ranked CSV of leads, and a clean print-to-PDF dossier. Stdlib only.
+a ranked CSV of leads, and a clean printable case report. Stdlib only.
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def _esc(s) -> str:
     return html.escape(str(s if s is not None else ""))
 
 
-def dossier_html(case: dict) -> str:
+def case_report_html(case: dict) -> str:
     child = case.get("child", {})
     leads = sorted(case.get("leads", []), key=lambda l: -l.get("match_score", 0))
     intel = case.get("intelligence") or {}
@@ -71,7 +71,7 @@ def dossier_html(case: dict) -> str:
     invest_html = ("<h3>Investigation summary</h3>" + "".join(inv)) if inv else ""
 
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>LifeFind dossier — {_esc(child.get('name', 'case'))}</title>
+<title>LifeFind case report — {_esc(child.get('name', 'case'))}</title>
 <style>
   body{{font-family:Arial,Helvetica,sans-serif;color:#111;max-width:900px;margin:24px auto;padding:0 18px}}
   h1{{margin:0 0 2px}} .sub{{color:#555;margin:0 0 18px;font-size:13px}}
@@ -85,8 +85,8 @@ def dossier_html(case: dict) -> str:
   @media print{{ a{{color:#111;text-decoration:none}} }}
 </style></head><body>
 <h1>MISSING — {_esc(child.get('name', 'Unknown'))}</h1>
-<p class="sub">LifeFind search dossier · generated {generated} · case {_esc(case.get('id'))}</p>
-<div class="banner">This dossier compiles <b>public</b> news, records and community reports.
+<p class="sub">LifeFind case report · generated {generated} · case {_esc(case.get('id'))}</p>
+<div class="banner">This report compiles <b>public</b> news, records and community reports.
 It is decision-support for searchers and authorities — not a substitute for an official investigation.</div>
 <div class="grid">
   <div><div class="k">Category</div>{_esc(child.get('category'))}</div>

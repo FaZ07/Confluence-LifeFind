@@ -227,7 +227,7 @@
       <circle cx="50" cy="50" r="20" stroke="#FFB84D" stroke-width="3" stroke-dasharray="46 16" opacity=".85"/>
       <circle cx="50" cy="50" r="33" stroke="#62E8FF" stroke-width="2" stroke-dasharray="38 28" opacity=".45"/>
     </svg>
-    <div class="tb-name">LIFE<b>LINE</b></div>
+    <div class="tb-name">LIFE<b>FIND</b></div>
   </div>
   <div class="tb-sep"></div>
   <div class="tb-cell"><span class="k">System</span><span class="v tb-status"><i class="sdot" id="sysDot"></i><span id="sysState">Standby</span></span></div>
@@ -242,12 +242,19 @@
   </div>
 </div>
 
+<div class="stepper hidden" id="stepper">
+  <button class="step on" data-p="map" onclick="showPage('map')"><b>1</b> Live map</button>
+  <button class="step" data-p="analysis" onclick="showPage('analysis')"><b>2</b> Analysis</button>
+  <button class="step" data-p="handoff" onclick="showPage('handoff')"><b>3</b> Handoff</button>
+  <button class="step newcase" onclick="resetOp()">＋ New case</button>
+</div>
+
 <main>
   <!-- INTAKE -->
   <section id="intake" class="intake">
-    <div class="kicker">Rapid response · new operation</div>
-    <h1 id="formTitle">Report a missing child</h1>
-    <p class="sub">Define the subject. LifeLine aggregates every wired public source and ranks the signal.</p>
+    <div class="kicker">Decision support · new case</div>
+    <h1 id="formTitle">New case · missing child</h1>
+    <p class="sub">LifeFind triages scattered <b>public</b> signal into ranked, corroborated leads — to help families, search teams and the authorities act faster. It assists the people searching; it never replaces the police.</p>
     <label>Subject type</label>
     <div class="cats" id="cats"></div>
     <div class="field"><label>Full name</label><input id="name" /></div>
@@ -264,22 +271,17 @@
       <div class="vision-note" id="visionNote"></div>
     </div>
     <div class="field"><label>Distinguishing features</label><input id="distinguishing_features" /></div>
-    <button class="btn" id="launch">◉&nbsp;&nbsp;Begin Search Operation</button>
+    <button class="btn" id="launch">◉&nbsp;&nbsp;Start case &amp; search public sources</button>
+    <p class="intake-foot">If someone is in immediate danger, contact your local emergency number first.</p>
   </section>
 
-  <!-- COMMAND CENTER -->
-  <section id="cc" class="cc hidden">
+  <!-- PAGE 2 · LIVE MAP -->
+  <section id="pageMap" class="page hidden">
     <div class="cc-grid">
       <!-- LEFT -->
       <aside class="panel cc-left">
         <div class="p-h"><span class="t">Subject Profile</span></div>
         <div class="prof" id="profile"></div>
-        <div class="ops-actions">
-          <button class="oa-btn" id="shareBtn" onclick="shareCase()">⤴ Share live case</button>
-          <a class="oa-btn" id="csvLink" href="#" download>⬇ Leads CSV</a>
-          <a class="oa-btn" id="dossierLink" href="#" target="_blank" rel="noopener">🖨 Dossier → PDF</a>
-        </div>
-        <div class="authorities" id="authorities"></div>
       </aside>
 
       <!-- CENTER -->
@@ -305,25 +307,28 @@
       <aside class="panel cc-right">
         <div class="p-h"><span class="t">Live Leads</span><span class="c" id="feedCount">0 active</span></div>
         <div class="filters" id="filters"></div>
-        <div class="fusion-alert hidden" id="fusionAlert">
-          <div class="fu-icon">⊕</div>
-          <div>
-            <div class="fu-k">SIGNAL FUSION DETECTED</div>
-            <div class="fu-loc" id="fusionLoc">—</div>
-            <div class="fu-detail"><b id="fusionCount">0</b> independent sources corroborate this location</div>
-          </div>
-        </div>
         <div class="feed" id="feed"></div>
       </aside>
     </div>
+  </section>
 
+  <!-- PAGE 3 · ANALYSIS -->
+  <section id="pageAnalysis" class="page hidden">
+    <div class="fusion-alert hidden" id="fusionAlert">
+      <div class="fu-icon">⊕</div>
+      <div>
+        <div class="fu-k">SIGNAL FUSION DETECTED</div>
+        <div class="fu-loc" id="fusionLoc">—</div>
+        <div class="fu-detail"><b id="fusionCount">0</b> independent sources corroborate this location</div>
+      </div>
+    </div>
     <div class="cc-bottom">
       <div class="panel">
         <div class="p-h"><span class="t">Search Priority Zones</span><span class="c">ranked by signal</span></div>
         <div class="zones" id="zones"></div>
         <div class="reco" id="reco"></div>
         <div class="ai-cmd hidden" id="aiCmd">
-          <div class="ai-cmd-k">AI COMMAND RECOMMENDATION</div>
+          <div class="ai-cmd-k">PRIORITY RECOMMENDATION</div>
           <div id="aiCmdZones"></div>
           <div class="ai-assess" id="aiAssess"></div>
           <div class="ai-action" id="aiAction"></div>
@@ -335,8 +340,6 @@
         <div class="tl" id="timeline"></div>
       </div>
     </div>
-
-    <!-- INVESTIGATION SUPPORT — deterministic corroboration / movement / cluster -->
     <div class="panel invest hidden" id="investPanel">
       <div class="p-h"><span class="t">Investigation Support</span><span class="c">deterministic · evidence-grade</span></div>
       <div id="ivContra" class="iv-contra hidden"></div>
@@ -355,38 +358,59 @@
         </div>
       </div>
     </div>
+  </section>
 
-    <!-- COMMANDER CHAT — appears after AI intelligence is ready -->
+  <!-- PAGE 4 · HANDOFF -->
+  <section id="pageHandoff" class="page hidden">
+    <div class="handoff-intro">
+      <div class="hi-k">▣ Hand off to the people who can act</div>
+      <p>LifeFind only aggregates <b>public</b> signal. It is decision support for searchers — <b>not</b> a substitute for an official investigation. Report to and verify with the official channels below; in an emergency call your local emergency number.</p>
+    </div>
+    <div class="handoff-grid">
+      <div class="panel handoff-panel">
+        <div class="p-h"><span class="t">Official channels</span></div>
+        <div class="authorities" id="authorities"></div>
+      </div>
+      <div class="panel handoff-panel">
+        <div class="p-h"><span class="t">Share &amp; export</span></div>
+        <div class="ops-actions">
+          <button class="oa-btn" id="shareBtn" onclick="shareCase()">⤴ Share live case link</button>
+          <a class="oa-btn" id="csvLink" href="#" download>⬇ Leads as CSV</a>
+          <a class="oa-btn" id="reportLink" href="#" target="_blank" rel="noopener">🖨 Printable case report</a>
+        </div>
+        <p class="oa-note">The live case link lets police or a search team watch the same leads arrive in real time. The CSV and printable report give them a ranked, sourced summary to act on.</p>
+      </div>
+    </div>
     <div class="panel cc-chat hidden" id="chatPanel">
       <div class="p-h">
-        <span class="t">◈ Search Commander Chat</span>
-        <span class="c">ask anything about this case</span>
+        <span class="t">◈ Ask the case</span>
+        <span class="c">question the evidence in plain language</span>
       </div>
       <div class="chat-msgs" id="chatMsgs">
         <div class="chat-msg ai">
-          <div class="chat-bubble">Commander online. Ask me why a zone was prioritized, what teams should do, or what the evidence shows.</div>
+          <div class="chat-bubble">Ready. Ask why a zone was prioritized, what the team should check first, or what the evidence shows.</div>
         </div>
       </div>
       <div class="chat-row">
         <input class="chat-inp" id="chatInp"
-          placeholder="Why Marina Beach?  ·  What should volunteers do?  ·  Show me the evidence"
+          placeholder="Why this zone?  ·  What should the team check first?  ·  Show me the evidence"
           onkeydown="if(event.key==='Enter'&&!$('chatBtn').disabled)sendChat()" />
         <button class="chat-btn" id="chatBtn" onclick="sendChat()">▶ Send</button>
       </div>
     </div>
-
-    <!-- SEARCH PLAN MODAL -->
-    <div class="plan-modal hidden" id="planModal">
-      <div class="plan-box">
-        <div class="plan-k">◈ COORDINATOR BRIEFING</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-bottom:16px;line-height:1.5">LifeLine identified the zones — hand this to your search coordinator to deploy real teams.</div>
-        <div id="planTeams"></div>
-        <div class="plan-meta" id="planMeta"></div>
-        <div class="plan-brief" id="planBrief"></div>
-        <button class="btn ghost" style="width:100%;text-align:center;margin:0" onclick="$('planModal').classList.add('hidden')">↩ Close</button>
-      </div>
-    </div>
   </section>
+
+  <!-- SEARCH PLAN MODAL (global) -->
+  <div class="plan-modal hidden" id="planModal">
+    <div class="plan-box">
+      <div class="plan-k">◈ COORDINATOR BRIEFING</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:16px;line-height:1.5">LifeFind identifies the priority zones from public signal — hand this to your search coordinator or the police to deploy real teams.</div>
+      <div id="planTeams"></div>
+      <div class="plan-meta" id="planMeta"></div>
+      <div class="plan-brief" id="planBrief"></div>
+      <button class="btn ghost" style="width:100%;text-align:center;margin:0" onclick="$('planModal').classList.add('hidden')">↩ Close</button>
+    </div>
+  </div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -398,6 +422,13 @@ let caseId=null, poll=null, dispCount=0, CATS=[], activeCat="child", feedFilter=
 let map=null, heatLayer=null, markerLayer=null, zoneLayer=null, areaLayer=null, lastZone=null, curMax=100;
 window._fusionByLead={}; window._relevance={};
 
+function showPage(p){
+  ["map","analysis","handoff"].forEach(n=>{ const el=$("page"+n.charAt(0).toUpperCase()+n.slice(1)); if(el) el.classList.toggle("hidden", n!==p); });
+  document.querySelectorAll("#stepper .step[data-p]").forEach(s=>s.classList.toggle("on", s.dataset.p===p));
+  if(p==="map"&&map) setTimeout(()=>map.invalidateSize(),50);
+  window.scrollTo(0,0);
+}
+
 fetch("/api/categories").then(r=>r.json()).then(cats=>{ CATS=cats;
   $("cats").innerHTML=cats.map(c=>`<div class="cat" data-key="${c.key}" onclick="selectCat('${c.key}')"><span class="ic">${c.icon}</span>${c.label}</div>`).join("");
   selectCat("child"); });
@@ -407,7 +438,7 @@ function fromDateTimePickerValue(v){ return (v||"").trim().replace("T"," "); }
 function selectCat(key){ activeCat=key; const c=catMeta(key);
   document.documentElement.style.setProperty("--accent", c.accent);
   document.querySelectorAll(".cat").forEach(el=>{ const on=el.dataset.key===key; el.classList.toggle("on",on); el.style.background=on?c.accent:""; });
-  $("formTitle").textContent="Report a "+c.label.toLowerCase();
+  $("formTitle").textContent="New case · "+c.label.toLowerCase();
   fetch("/api/demo-case?category="+key).then(r=>r.json()).then(d=>FIELDS.forEach(f=>{ if($(f)) $(f).value=f==="last_seen_time"?toDateTimePickerValue(d[f]):(d[f]||""); }));
 }
 
@@ -432,7 +463,7 @@ $("launch").onclick=async()=>{
   const child={category:activeCat}; FIELDS.forEach(f=>child[f]=f==="last_seen_time"?fromDateTimePickerValue($(f).value):$(f).value);
   const {case_id}=await (await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(child)})).json();
   caseId=case_id; _authLoaded=false; setExportLinks();
-  $("intake").classList.add("hidden"); $("cc").classList.remove("hidden");
+  $("intake").classList.add("hidden"); $("stepper").classList.remove("hidden"); showPage("map");
   $("sysDot").classList.add("scan"); $("sysState").textContent="Scanning";
   dispCount=0; initMap(); setTimeout(()=>map&&map.invalidateSize(),60);
   poll=setInterval(refresh,600); refresh();
@@ -599,7 +630,9 @@ function renderTimeline(leads,zones){
   $("timeline").innerHTML=ev.map(e=>`<div class="tl-row"><div class="tl-time">${e.t}</div><div class="tl-dot ${e.k}"></div><div class="tl-txt">${e.x}</div></div>`).join("");
 }
 function resetOp(){
-  clearInterval(poll); $("cc").classList.add("hidden"); $("intake").classList.remove("hidden");
+  clearInterval(poll); $("stepper").classList.add("hidden");
+  ["pageMap","pageAnalysis","pageHandoff"].forEach(p=>$(p).classList.add("hidden"));
+  $("intake").classList.remove("hidden");
   // reset the feed filter so a new operation never opens on a stale (e.g. "reviewing") view
   feedFilter="all"; document.querySelectorAll("#filters .fchip").forEach(c=>c.classList.toggle("on",c.dataset.f==="all"));
   $("sysDot").classList.remove("scan"); $("sysState").textContent="Standby";
@@ -725,9 +758,9 @@ function renderPlan(p){
 // ---- shareable case + export + official channels ----
 let _authLoaded=false;
 function setExportLinks(){ if(!caseId) return;
-  const cs=$("csvLink"), ds=$("dossierLink");
+  const cs=$("csvLink"), ds=$("reportLink");
   if(cs) cs.href=`/api/case/${caseId}/export.csv`;
-  if(ds) ds.href=`/api/case/${caseId}/dossier`;
+  if(ds) ds.href=`/api/case/${caseId}/report`;
 }
 function shareCase(){ if(!caseId) return; const url=`${location.origin}/?case=${caseId}`;
   const flash=()=>{ const b=$("shareBtn"); if(b){ const o=b.textContent; b.textContent="✓ Link copied"; setTimeout(()=>b.textContent=o,1600); } };
@@ -736,12 +769,12 @@ function shareCase(){ if(!caseId) return; const url=`${location.origin}/?case=${
 }
 async function loadAuthorities(){ if(_authLoaded||!caseId) return; _authLoaded=true;
   try{ const a=await (await fetch(`/api/case/${caseId}/authorities`)).json();
-    $("authorities").innerHTML=`<div class="auth-h">▣ Official channels · ${escHtml(a.country)}</div>`+
+    $("authorities").innerHTML=`<div class="auth-h">Region · ${escHtml(a.country)}</div>`+
       (a.channels||[]).map(c=>`<div class="auth-row"><div class="auth-n">${escHtml(c.name)}</div><div class="auth-s">${escHtml(c.scope)}</div><div class="auth-meta">${c.phone?`<span class="auth-p">☎ ${escHtml(c.phone)}</span>`:""}${c.url?`<a href="${escHtml(c.url)}" target="_blank" rel="noopener">open ↗</a>`:""}</div></div>`).join("")
       +`<div class="auth-note">${escHtml(a.note||"")}</div>`;
   }catch(e){ _authLoaded=false; }
 }
-function openCase(id){ caseId=id; $("intake").classList.add("hidden"); $("cc").classList.remove("hidden");
+function openCase(id){ caseId=id; $("intake").classList.add("hidden"); $("stepper").classList.remove("hidden"); showPage("map");
   $("sysDot").classList.add("scan"); $("sysState").textContent="Loading"; dispCount=0; _authLoaded=false;
   setExportLinks(); initMap(); setTimeout(()=>map&&map.invalidateSize(),60);
   poll=setInterval(refresh,800); refresh();
@@ -932,6 +965,28 @@ async function refresh(){
   .vchip:hover{ border-color:var(--accent); }
   .vchip i{ width:13px; height:13px; border-radius:4px; border:1px solid rgba(255,255,255,.25); display:inline-block; }
   .vision-note{ font-size:10px; color:var(--faint); margin-top:7px; line-height:1.5; }
+
+  /* ---- 4-page stepper + pages ---- */
+  .stepper{ position:sticky; top:54px; z-index:900; display:flex; gap:6px; align-items:center;
+    padding:9px 18px; background:rgba(7,10,20,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
+  .step{ font-family:var(--mono); font-size:11px; letter-spacing:.6px; color:var(--muted); cursor:pointer;
+    background:transparent; border:1px solid var(--line); border-radius:8px; padding:7px 13px; transition:.15s; }
+  .step b{ margin-right:6px; color:var(--faint); }
+  .step:hover{ color:var(--ink); border-color:var(--line-2); }
+  .step.on{ color:#0a0d16; background:var(--accent); border-color:transparent; }
+  .step.on b{ color:#0a0d16; }
+  .step.newcase{ margin-left:auto; color:var(--cyan); border-color:rgba(98,232,255,.3); }
+  .step.newcase:hover{ background:rgba(98,232,255,.08); color:var(--cyan); }
+  .page{ padding:16px; }
+  .intake-foot{ font-size:11px; color:var(--faint); margin-top:14px; text-align:center; }
+  .handoff-intro{ max-width:1040px; margin:2px auto 14px; padding:14px 18px; border-radius:12px;
+    background:rgba(98,232,255,.05); border:1px solid rgba(98,232,255,.22); }
+  .handoff-intro .hi-k{ font-family:var(--mono); font-size:10px; letter-spacing:1.4px; color:var(--cyan); margin-bottom:7px; }
+  .handoff-intro p{ margin:0; font-size:12.5px; color:var(--muted); line-height:1.6; }
+  .handoff-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+  .handoff-panel .ops-actions{ padding:14px 16px 4px; }
+  .oa-note{ font-size:11px; color:var(--faint); line-height:1.55; padding:0 16px 14px; margin:6px 0 0; }
+  @media (max-width:1180px){ .handoff-grid{ grid-template-columns:1fr; } }
 </style>
 </body>
 </html>

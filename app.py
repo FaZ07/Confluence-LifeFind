@@ -255,12 +255,12 @@ async def export_csv(case_id: str):
         headers={"Content-Disposition": f'attachment; filename="lifefind-{case_id}.csv"'})
 
 
-@app.get("/api/case/{case_id}/dossier")
-async def dossier(case_id: str):
+@app.get("/api/case/{case_id}/report")
+async def case_report(case_id: str):
     case = _get_case(case_id)
     if not case:
         raise HTTPException(404, "case not found")
-    return HTMLResponse(export.dossier_html(case))
+    return HTMLResponse(export.case_report_html(case))
 
 
 @app.post("/api/vision/colors")

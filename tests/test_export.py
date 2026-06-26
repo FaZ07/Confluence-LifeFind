@@ -1,4 +1,4 @@
-"""Export: CSV + print-to-PDF dossier for authority handoff."""
+"""Export: CSV + printable case report for authority handoff."""
 import export
 
 
@@ -32,8 +32,8 @@ def test_csv_ranks_by_score():
     assert rows[1].startswith("1,88")            # top lead first
 
 
-def test_dossier_html_is_well_formed():
-    html = export.dossier_html(_case())
+def test_case_report_html_is_well_formed():
+    html = export.case_report_html(_case())
     assert "<html" in html and "MISSING" in html
     assert "Aarav Sharma" in html
     assert "Marina Beach" in html                # priority zone rendered

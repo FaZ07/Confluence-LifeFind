@@ -3,11 +3,12 @@
 [![CI](https://github.com/FaZ07/LifeFind/actions/workflows/ci.yml/badge.svg)](https://github.com/FaZ07/LifeFind/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Find anyone — before it's too late. Every public source, one live command center.**
+**Public-signal triage that helps families, search teams and the authorities act faster.**
 
 > We don't surveil people. Every sighting, news mention and public post already exists —
-> it's just scattered. LifeFind unifies that public signal into one ranked, live command
-> center in seconds instead of weeks. One engine, **any** missing human, **any** city.
+> it's just scattered. LifeFind unifies that public signal into one ranked, corroborated
+> view in seconds instead of weeks. It assists the people already searching — it never
+> replaces the police, and it always hands off to them.
 
 The open-source rebuild of the *LifeLine* competition project — the Anakin Wire API and
 Groq LLM ripped out, then hardened into something that actually ships.
@@ -20,7 +21,7 @@ Groq LLM ripped out, then hardened into something that actually ships.
 | Intelligence | Groq LLM (key, non-deterministic) | Deterministic engine — same numbers every run |
 | Geography | hardcoded Chennai table | **any city on earth** (OpenStreetMap, cached) |
 | Persistence | in-memory only | SQLite — cases survive restarts, **shareable by link** |
-| Handoff | — | official channels + CSV / print-to-PDF dossier |
+| Handoff | — | official channels + CSV / printable case report |
 | API keys | `WIRE_API_KEY` + `GROQ_API_KEY` | **none** |
 | Hardening | — | retries · rate-limit · validation · logging · 53 tests |
 
@@ -55,7 +56,7 @@ pytest -q                                        # 53 tests over the whole engin
 - **Authority handoff** — LifeFind only aggregates *public* signal; it never replaces
   the authorities. It surfaces the right official channels for the case's region
   (Childline 1098, NCMEC, NamUs, Missing People, INTERPOL …) so the next click is a
-  real report — plus one-click **CSV** and a **print-to-PDF dossier** to hand police a
+  real report — plus one-click **CSV** and a **printable case report** to hand police a
   ranked lead package.
 
 ## The four real sources (`sources.py`)
@@ -133,7 +134,7 @@ hard-fails). All config is env-driven (`settings.py`).
 | `scoring.py` | Deterministic, explainable scoring + de-dup |
 | `store.py` | SQLite persistence (shareable cases) |
 | `authorities.py` | Region → official channels |
-| `export.py` | CSV + print-to-PDF dossier |
+| `export.py` | CSV + printable case report |
 | `settings.py` | Env-driven configuration |
 | `static/index.html` | Command center UI — no build step |
 | `tests/` | 53 pytest cases (unit + API) |
