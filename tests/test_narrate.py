@@ -9,6 +9,14 @@ def test_disabled_by_default():
     assert narrate.enabled() is False
 
 
+def test_status_explains_why_off_without_key():
+    """The status box needs a clear reason when narration is down."""
+    st = narrate.status()
+    assert st["on"] is False
+    assert "GROQ_API_KEY" in st["reason"]
+    assert st["model"]            # model is still reported so the UI can show it
+
+
 def test_polish_is_a_no_op_when_disabled():
     """With narration off, polish returns the deterministic text byte-for-byte and
     never touches the network (so this runs offline, instantly)."""

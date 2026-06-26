@@ -52,6 +52,22 @@
     border:1px solid var(--line-2); color:var(--muted); }
   .tb-mode.live{ color:#07140d; background:var(--green); border-color:transparent; font-weight:600; }
 
+  /* ---- Groq AI status strip ---- */
+  .ai-status{ display:flex; align-items:center; gap:11px; padding:9px 18px; font-size:12px; border-bottom:1px solid; }
+  .ai-status.up{ background:rgba(70,224,160,.06); border-color:rgba(70,224,160,.22); }
+  .ai-status.down{ background:rgba(255,184,77,.06); border-color:rgba(255,184,77,.24); }
+  .ai-status .ai-dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .ai-status.up .ai-dot{ background:var(--green); box-shadow:0 0 8px var(--green); }
+  .ai-status.down .ai-dot{ background:var(--amber); box-shadow:0 0 8px var(--amber); animation:spulse 1.8s infinite; }
+  .ai-status-body{ display:flex; flex-wrap:wrap; align-items:baseline; gap:3px 10px; min-width:0; }
+  .ai-status .ai-t{ font-weight:600; }
+  .ai-status.up .ai-t{ color:#bfeede; }
+  .ai-status.down .ai-t{ color:#ffe2b0; }
+  .ai-status .ai-why{ color:var(--muted); }
+  .ai-status .ai-x{ margin-left:auto; cursor:pointer; background:none; border:none; color:var(--faint);
+    font-size:13px; line-height:1; padding:3px 6px; border-radius:6px; flex:none; }
+  .ai-status .ai-x:hover{ color:var(--ink); background:rgba(255,255,255,.05); }
+
   /* ---------- intake ---------- */
   main{ padding:26px; }
   .intake{ max-width:760px; margin:3vh auto; background:var(--panel); border:1px solid var(--line); border-radius:16px;
@@ -240,6 +256,15 @@
   <div class="tb-right">
     <div class="tb-mode live" id="modeBadge">OPEN SOURCES</div>
   </div>
+</div>
+
+<div class="ai-status" id="aiStatus" hidden>
+  <span class="ai-dot"></span>
+  <span class="ai-status-body">
+    <span class="ai-t" id="aiStatusTxt"></span>
+    <span class="ai-why" id="aiStatusWhy"></span>
+  </span>
+  <button type="button" class="ai-x" id="aiStatusX" aria-label="Dismiss" onclick="dismissAiStatus()">✕</button>
 </div>
 
 <div class="stepper hidden" id="stepper">
@@ -480,12 +505,22 @@ fetch("/api/categories").then(r=>r.json()).then(cats=>{ CATS=cats;
 // serverless (Vercel) runs synchronous + no shared store; hide the features that need one.
 // The Demo/Live data-source toggle works in either mode (it's per-search).
 let SV=false, useLive=false;
-fetch("/api/health").then(r=>r.json()).then(h=>{ SV=!!h.sync; useLive=!!h.live_default; updateSrcToggle();
+fetch("/api/health").then(r=>r.json()).then(h=>{ SV=!!h.sync; useLive=!!h.live_default; updateSrcToggle(); renderAiStatus(h);
   if(SV){
     ["shareBtn","familyBtn"].forEach(id=>{ const e=$(id); if(e) e.style.display="none"; });
     document.querySelectorAll('.mtab[data-m="sighting"]').forEach(t=>{ t.style.display="none"; });
   }
 }).catch(()=>{});
+// Groq AI status strip — shows whether narration is on and, when off, exactly why
+function renderAiStatus(h){
+  const box=$("aiStatus"); if(!box) return;
+  if(sessionStorage.getItem("aiStatusDismissed")){ box.hidden=true; return; }
+  const st=(h&&h.narrate_status)||{on:!!(h&&h.narrate),reason:""};
+  box.className="ai-status "+(st.on?"up":"down"); box.hidden=false;
+  $("aiStatusTxt").textContent=st.on ? `Groq AI narration active${st.model?" · "+st.model:""}` : "Groq AI narration offline";
+  $("aiStatusWhy").textContent=st.reason||"";
+}
+function dismissAiStatus(){ sessionStorage.setItem("aiStatusDismissed","1"); const b=$("aiStatus"); if(b) b.hidden=true; }
 function toggleLive(){ useLive=!useLive; updateSrcToggle(); }
 function updateSrcToggle(){
   const sw=$("stSwitch"); if(!sw) return;

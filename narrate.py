@@ -41,6 +41,18 @@ def enabled() -> bool:
     return bool(settings.NARRATE and settings.GROQ_API_KEY)
 
 
+def status() -> dict:
+    """Why narration is on/off — surfaced in /api/health for the UI status box."""
+    model = settings.GROQ_MODEL
+    if not settings.GROQ_API_KEY:
+        return {"on": False, "model": model,
+                "reason": "No GROQ_API_KEY configured. Add a key (local .env or your host's "
+                          "env vars) to switch it on — the deterministic engine runs regardless."}
+    if not settings.NARRATE_OPT_IN:
+        return {"on": False, "model": model, "reason": "Turned off via LIFELINE_NARRATE=0."}
+    return {"on": True, "model": model, "reason": "Active — polishing the commander chat replies."}
+
+
 def _redact(text: str, child: dict | None) -> str:
     """Replace the subject's name (full and token-wise) with a neutral label so no
     identifying detail is sent to the LLM. Best-effort; the payload is built only

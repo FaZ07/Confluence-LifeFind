@@ -90,7 +90,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_BASE = os.getenv("GROQ_BASE", "https://api.groq.com/openai/v1/chat/completions")
 NARRATE_TIMEOUT = _f("LIFELINE_NARRATE_TIMEOUT", 6.0)
-NARRATE = _b("LIFELINE_NARRATE", True) and bool(GROQ_API_KEY)   # on only when a key exists
+NARRATE_OPT_IN = _b("LIFELINE_NARRATE", True)                   # operator intent (env)
+NARRATE = NARRATE_OPT_IN and bool(GROQ_API_KEY)                # effective: also needs a key
 
 # --- API hardening -----------------------------------------------------
 RATE_LIMIT_PER_MIN = _i("LIFELINE_RATE_LIMIT_PER_MIN", 20)    # /api/search per client per minute

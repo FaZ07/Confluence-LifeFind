@@ -420,7 +420,7 @@ async def health():
         "offline": settings.OFFLINE, "live_default": not settings.OFFLINE,
         "geocode": settings.GEOCODE_ENABLED and not settings.OFFLINE,
         "persist": store.enabled(), "active_cases": len(CASES), "vision": True,
-        "sync": settings.SYNC, "narrate": narrate.enabled(),
+        "sync": settings.SYNC, "narrate": narrate.enabled(), "narrate_status": narrate.status(),
         "sources": [c["label"] for c in sources.CHANNELS],
     }
 
