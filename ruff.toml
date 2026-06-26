@@ -1,12 +1,8 @@
-[tool.ruff]
 line-length = 120
 target-version = "py312"
 
-[tool.ruff.lint]
+[lint]
 select = ["E", "F", "I", "UP"]
 # E501 long lines (data tables / inline HTML); E741 `l` reads fine for "lead";
 # E702 inline semicolons are intentional in a few tight spots; UP031 percent-format is clear.
 ignore = ["E501", "E741", "E702", "UP031"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
