@@ -7,46 +7,52 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#0b1020; --card:#111a30; --line:rgba(255,255,255,.09); --ink:#eaf0fb;
-    --muted:#9fb0cf; --faint:#6b7a99; --teal:#62E8FF; --green:#6ee7b7; --amber:#ffcf8a; }
+  :root{ --bg:#F4F7FB; --card:rgba(255,255,255,.82); --glass:rgba(255,255,255,.7); --line:rgba(15,23,42,.09);
+    --ink:#0F172A; --muted:#64748B; --faint:#94A3B8; --primary:#2563EB; --cyan:#06B6D4; --green:#22C55E; --warn:#F59E0B;
+    --grad:linear-gradient(120deg,#2563EB,#06B6D4); }
   *{ box-sizing:border-box; }
-  body{ margin:0; min-height:100vh; background:
-      radial-gradient(900px 500px at 80% -10%, rgba(98,232,255,.06), transparent 60%),
-      var(--bg); color:var(--ink); font-family:"Inter",system-ui,sans-serif; line-height:1.55; }
-  .wrap{ max-width:680px; margin:0 auto; padding:30px 20px 60px; }
-  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:2px; font-size:14px; margin-bottom:6px; }
-  .brand b{ color:var(--amber); } .brand .dot{ width:9px;height:9px;border-radius:50%;background:var(--green); box-shadow:0 0 0 0 rgba(110,231,183,.6); animation:p 1.8s infinite; }
-  @keyframes p{ 0%{box-shadow:0 0 0 0 rgba(110,231,183,.5)} 70%{box-shadow:0 0 0 8px rgba(110,231,183,0)} 100%{box-shadow:0 0 0 0 rgba(110,231,183,0)} }
-  h1{ font-size:22px; margin:14px 0 4px; }
+  body{ margin:0; min-height:100vh; color:var(--ink); font-family:"Inter",system-ui,sans-serif; line-height:1.55;
+    background:
+      radial-gradient(620px 480px at 14% 2%, rgba(37,99,235,.12), transparent 60%),
+      radial-gradient(680px 560px at 90% 0%, rgba(6,182,212,.11), transparent 62%),
+      radial-gradient(640px 600px at 70% 108%, rgba(139,92,246,.09), transparent 60%),
+      var(--bg); }
+  .wrap{ max-width:680px; margin:0 auto; padding:34px 20px 60px; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:1px; font-size:15px; margin-bottom:6px; }
+  .brand b{ background:var(--grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .brand .dot{ width:9px;height:9px;border-radius:50%;background:var(--green); box-shadow:0 0 0 0 rgba(34,197,94,.6); animation:p 1.8s infinite; }
+  @keyframes p{ 0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)} 70%{box-shadow:0 0 0 8px rgba(34,197,94,0)} 100%{box-shadow:0 0 0 0 rgba(34,197,94,0)} }
+  h1{ font-size:23px; margin:14px 0 4px; letter-spacing:-.4px; }
   .sub{ color:var(--muted); margin:0 0 22px; font-size:14px; }
-  .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 22px; margin-bottom:16px; }
+  .card{ background:var(--card); backdrop-filter:blur(20px) saturate(150%); border:1px solid var(--glass); border-radius:18px;
+    padding:20px 22px; margin-bottom:16px; box-shadow:0 14px 40px -22px rgba(31,45,80,.32); }
   .status{ display:flex; align-items:center; gap:12px; }
-  .status .ic{ width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex:none;
-    background:rgba(98,232,255,.1); border:1px solid rgba(98,232,255,.25); }
+  .status .ic{ width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:21px; flex:none;
+    background:rgba(37,99,235,.1); border:1px solid rgba(37,99,235,.22); color:var(--primary); }
   .status .st{ font-weight:600; font-size:16px; } .status .sd{ color:var(--muted); font-size:13px; }
   .who h2{ margin:0 0 2px; font-size:19px; } .who .meta{ color:var(--muted); font-size:13.5px; }
   .row{ display:flex; justify-content:space-between; padding:9px 0; border-top:1px solid var(--line); font-size:14px; }
   .row:first-child{ border-top:none; } .row .k{ color:var(--muted); }
   .ck{ display:flex; align-items:center; gap:10px; padding:8px 0; font-size:14px; }
-  .ck .b{ width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none;
-    background:rgba(110,231,183,.12); border:1px solid rgba(110,231,183,.3); color:var(--green); }
-  .ck .b.pending{ background:rgba(255,255,255,.05); border-color:var(--line); color:var(--faint); }
+  .ck .b{ width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none;
+    background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3); color:#16a34a; }
+  .ck .b.pending{ background:rgba(15,23,42,.04); border-color:var(--line); color:var(--faint); }
   .zone{ display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
   .zone:first-child{ border-top:none; } .zone .zn{ flex:1; font-weight:600; font-size:14.5px; }
-  .ztag{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; }
-  .HIGH{ color:#0a0d16; background:var(--amber); } .MEDIUM{ color:#0a0d16; background:var(--teal); }
-  .LOW{ color:var(--muted); background:rgba(255,255,255,.06); border:1px solid var(--line); }
+  .ztag{ font-size:11px; font-weight:600; padding:4px 11px; border-radius:20px; }
+  .HIGH{ color:#fff; background:var(--grad); } .MEDIUM{ color:#fff; background:var(--cyan); }
+  .LOW{ color:var(--muted); background:rgba(15,23,42,.05); border:1px solid var(--line); }
   .ct{ font-size:11.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--faint); margin-bottom:13px; }
-  .note{ background:rgba(255,207,138,.06); border:1px solid rgba(255,207,138,.25); border-radius:14px;
-    padding:16px 18px; font-size:13.5px; color:var(--amber); line-height:1.6; }
-  .note b{ color:#ffe2b5; }
+  .note{ background:rgba(245,158,11,.07); border:1px solid rgba(245,158,11,.28); border-radius:16px;
+    padding:16px 18px; font-size:13.5px; color:#b45309; line-height:1.6; }
+  .note b{ color:#92400e; }
   .foot{ text-align:center; color:var(--faint); font-size:12px; margin-top:18px; }
-  .err{ color:#ffb4b4; font-size:14px; }
+  .err{ color:#dc2626; font-size:14px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="brand"><span class="dot"></span>LIFE<b>FIND</b> · FAMILY UPDATES</div>
+  <div class="brand"><span class="dot"></span>Life<b>Find</b> · FAMILY UPDATES</div>
   <h1 id="title">Loading the latest…</h1>
   <p class="sub" id="updated"></p>
 
