@@ -90,8 +90,17 @@ Turns isolated clues into evidence — all deterministic, no ML:
 - **Contradiction engine** — flags conflicting appearance descriptions across sources.
 
 This is what takes it from a search *aggregator* to an *investigation-support* tool.
-(Deliberately **not** included: face / age / gender estimation from photos — bias-prone
-overclaim that breaks the deterministic, no-keys design.)
+
+## Photo color analysis (`vision.py`)
+
+Upload the missing person's photo → LifeFind extracts the **dominant clothing
+colors** (unsupervised median-cut color clustering, center-weighted) and offers them
+as one-tap chips that flow into the clothing field and the lead scoring. The image is
+processed **in memory and never stored**.
+
+**Colors only — no face recognition, no age/gender estimation, no identity matching.**
+Inferring a person's age or gender from a single photo is bias-prone pseudo-science
+and the kind of overclaim that discredits a serious system, so it is deliberately out.
 
 ## Scoring (`scoring.py`)
 
@@ -117,6 +126,7 @@ hard-fails). All config is env-driven (`settings.py`).
 | `geo.py` | Global geocoding (OSM) + offline gazetteer |
 | `intel.py` | Deterministic fusion, zones, timeline, chat, plan |
 | `analysis.py` | Corroboration, movement, clustering, search area, contradictions |
+| `vision.py` | Dominant clothing-color extraction from a photo (colors only) |
 | `scoring.py` | Deterministic, explainable scoring + de-dup |
 | `store.py` | SQLite persistence (shareable cases) |
 | `authorities.py` | Region → official channels |

@@ -10,6 +10,7 @@ Run:  uvicorn app:app --reload --port 8000   ->  open http://localhost:8000
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import time
 import uuid
@@ -29,6 +30,7 @@ import intel
 import settings
 import sources
 import store
+import vision
 from scoring import dedup, score_lead
 
 logging.basicConfig(
@@ -248,12 +250,36 @@ async def dossier(case_id: str):
     return HTMLResponse(export.dossier_html(case))
 
 
+@app.post("/api/vision/colors")
+async def vision_colors(body: dict):
+    """Extract dominant clothing colors from a base64 photo. Processed in memory,
+    never stored. Colors only — no face/age/gender inference."""
+    raw = (body.get("image") or "").strip()
+    if raw.startswith("data:"):
+        raw = raw.split(",", 1)[-1]
+    try:
+        data = base64.b64decode(raw)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(422, "invalid image data")
+    if not data:
+        raise HTTPException(422, "no image provided")
+    if len(data) > settings.MAX_IMAGE_BYTES:
+        raise HTTPException(413, "image too large")
+    try:
+        colors = vision.extract_colors(data)
+    except ValueError:
+        raise HTTPException(422, "could not read that image")
+    return {"colors": colors,
+            "note": "Dominant colors detected in the photo (processed in memory, not stored). "
+                    "Review before using — colors only, no identity inference."}
+
+
 @app.get("/api/health")
 async def health():
     return {
         "status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION,
         "offline": settings.OFFLINE, "geocode": settings.GEOCODE_ENABLED,
-        "persist": store.enabled(), "active_cases": len(CASES),
+        "persist": store.enabled(), "active_cases": len(CASES), "vision": True,
         "sources": [c["label"] for c in sources.CHANNELS],
     }
 

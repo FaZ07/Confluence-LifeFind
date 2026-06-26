@@ -257,6 +257,12 @@
     </div>
     <div class="field"><label>Last seen — location</label><input id="last_seen_location" /></div>
     <div class="field"><label>Clothing (comma separated)</label><input id="clothing" /></div>
+    <div class="field vision-field">
+      <label>Detect clothing colors from a photo (optional)</label>
+      <input type="file" id="photoInput" accept="image/*" onchange="onPhoto(event)" />
+      <div class="vision-chips" id="visionChips"></div>
+      <div class="vision-note" id="visionNote"></div>
+    </div>
     <div class="field"><label>Distinguishing features</label><input id="distinguishing_features" /></div>
     <button class="btn" id="launch">◉&nbsp;&nbsp;Begin Search Operation</button>
   </section>
@@ -403,6 +409,23 @@ function selectCat(key){ activeCat=key; const c=catMeta(key);
   document.querySelectorAll(".cat").forEach(el=>{ const on=el.dataset.key===key; el.classList.toggle("on",on); el.style.background=on?c.accent:""; });
   $("formTitle").textContent="Report a "+c.label.toLowerCase();
   fetch("/api/demo-case?category="+key).then(r=>r.json()).then(d=>FIELDS.forEach(f=>{ if($(f)) $(f).value=f==="last_seen_time"?toDateTimePickerValue(d[f]):(d[f]||""); }));
+}
+
+// ---- photo color detection (clothing colors only; image processed in memory, not stored) ----
+async function onPhoto(e){
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  $("visionChips").innerHTML=""; $("visionNote").textContent="Analyzing photo…";
+  try{
+    const dataURL=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f); });
+    const out=await (await fetch("/api/vision/colors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataURL})})).json();
+    if(!out.colors||!out.colors.length){ $("visionNote").textContent="No clear colors detected."; return; }
+    $("visionChips").innerHTML=out.colors.map(c=>`<button type="button" class="vchip" onclick="addColor('${c.name}')"><i style="background:${c.hex}"></i>${c.name} ${c.pct}%</button>`).join("");
+    $("visionNote").textContent=out.note||"Tap a color to add it to clothing.";
+  }catch(err){ $("visionNote").textContent="Couldn't analyze that image."; }
+}
+function addColor(name){
+  const inp=$("clothing"); const parts=inp.value.split(",").map(s=>s.trim()).filter(Boolean);
+  if(!parts.some(p=>p.toLowerCase()===name.toLowerCase())){ parts.push(name); inp.value=parts.join(", "); }
 }
 
 $("launch").onclick=async()=>{
@@ -896,6 +919,18 @@ async function refresh(){
     border-radius:3px; box-shadow:0 0 8px rgba(70,224,160,.5); }
   @media (max-width:1180px){ .invest-grid{ grid-template-columns:1fr; }
     .invest-col{ border-left:none; border-top:1px solid var(--line); } .invest-col:first-child{ border-top:none; } }
+
+  /* ---- Photo color detection ---- */
+  .vision-field input[type="file"]{ font-size:11px; color:var(--muted); padding:9px 12px; cursor:pointer; }
+  .vision-field input[type="file"]::file-selector-button{ font:inherit; font-size:11px; margin-right:10px; cursor:pointer;
+    color:var(--ink); background:var(--panel-2); border:1px solid var(--line-2); border-radius:7px; padding:6px 11px; }
+  .vision-field input[type="file"]::file-selector-button:hover{ border-color:var(--accent); color:var(--accent); }
+  .vision-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+  .vchip{ display:inline-flex; align-items:center; gap:7px; cursor:pointer; font:inherit; font-size:11.5px; font-weight:600;
+    color:var(--ink); background:var(--panel-2); border:1px solid var(--line-2); border-radius:8px; padding:5px 10px; transition:.15s; }
+  .vchip:hover{ border-color:var(--accent); }
+  .vchip i{ width:13px; height:13px; border-radius:4px; border:1px solid rgba(255,255,255,.25); display:inline-block; }
+  .vision-note{ font-size:10px; color:var(--faint); margin-top:7px; line-height:1.5; }
 </style>
 </body>
 </html>

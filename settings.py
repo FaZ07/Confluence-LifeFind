@@ -61,4 +61,5 @@ CASE_TTL_DAYS = _i("LIFELINE_CASE_TTL_DAYS", 30)
 # --- API hardening -----------------------------------------------------
 RATE_LIMIT_PER_MIN = _i("LIFELINE_RATE_LIMIT_PER_MIN", 20)    # /api/search per client per minute
 MAX_FIELD_LEN = _i("LIFELINE_MAX_FIELD_LEN", 200)
+MAX_IMAGE_BYTES = _i("LIFELINE_MAX_IMAGE_BYTES", 8 * 1024 * 1024)  # photo color analysis upload cap
 ALLOW_ORIGINS = [o for o in os.getenv("LIFELINE_CORS", "*").split(",") if o]
