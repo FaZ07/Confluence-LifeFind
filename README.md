@@ -1,9 +1,9 @@
-# LifeFind — Missing Human Search Operations Console
+# LifeFind — the bridge between families searching and the officials who can act
 
 [![CI](https://github.com/FaZ07/LifeFind/actions/workflows/ci.yml/badge.svg)](https://github.com/FaZ07/LifeFind/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Public-signal triage that helps families, search teams and the authorities act faster.**
+**Connecting the families who are searching with the officials who can act — by turning scattered public signal into one ranked, corroborated, official-ready case.**
 
 > We don't surveil people. Every sighting, news mention and public post already exists —
 > it's just scattered. LifeFind unifies that public signal into one ranked, corroborated

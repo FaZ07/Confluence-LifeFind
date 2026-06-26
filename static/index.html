@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>LifeFind — Aurora Intelligence Console</title>
+<title>LifeFind — the bridge between families searching and the officials who can act</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -442,6 +442,13 @@
   .intake h1{ font-family:var(--display); font-weight:700; margin:0 0 8px; font-size:32px; letter-spacing:-.6px; }
   .intake p.sub{ margin:0 0 24px; color:var(--muted); line-height:1.6; }
   .intake p.sub b{ color:var(--ink); }
+  /* family -> LifeFind -> officials bridge */
+  .bridge{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:0 0 22px; padding:12px 15px; border-radius:13px;
+    background:linear-gradient(180deg, rgba(37,99,235,.05), var(--card-2)); border:1px solid var(--line); }
+  .bridge .bstep{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--ink); }
+  .bridge .bic{ width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-size:14px; background:var(--card-solid); border:1px solid var(--line-2); }
+  .bridge .barr{ color:var(--primary); font-weight:800; }
 
   .cats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:24px; }
   .cat{ display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; padding:13px 14px; border-radius:14px;
@@ -1044,7 +1051,7 @@
         <div class="nu-role">Active case</div>
       </div>
     </div>
-    <div class="nav-foot">Decision support for searchers — public signal only. Never a replacement for the police.</div>
+    <div class="nav-foot">The bridge between families searching and the officials who can act. Public signal only — never a replacement for the police.</div>
   </aside>
 
   <div class="content">
@@ -1079,9 +1086,16 @@
             <button class="mtab on" data-m="case" onclick="showIntake('case')">New case</button>
             <button class="mtab" data-m="sighting" onclick="showIntake('sighting')">Report a sighting</button>
           </div>
-          <div class="kicker">Aurora Intelligence · new case</div>
+          <div class="kicker">Family intake · report a missing person</div>
           <h1 id="formTitle">New case · missing child</h1>
-          <p class="sub">LifeFind triages scattered <b>public</b> signal into ranked, corroborated leads — to help families, search teams and the authorities act faster. It assists the people searching; it never replaces the police.</p>
+          <p class="sub">LifeFind connects <b>families searching</b> with the <b>officials who can act</b>. It turns a family's scattered worry into one ranked, corroborated, <b>official-ready</b> case from <b>public</b> signal — then hands it to the authorities. It supports the people searching; it never replaces the police.</p>
+          <div class="bridge">
+            <span class="bstep"><span class="bic">👪</span>Family reports</span>
+            <span class="barr">→</span>
+            <span class="bstep"><span class="bic">◈</span>LifeFind corroborates public signal</span>
+            <span class="barr">→</span>
+            <span class="bstep"><span class="bic">🛡️</span>Officials act</span>
+          </div>
           <div class="src-toggle" id="srcToggle" title="ONLINE / OFFLINE switch for this case.&#10;&#10;DEMO (offline): instant bundled sample leads — perfect for a stage or no-wifi.&#10;LIVE (online): pulls real public signal — Google News · Bing · GDELT · Reddit — with global geocoding.&#10;&#10;Set it before you start the case.">
             <div class="st-info">
               <span class="st-label">⚡ Data source · online mode</span>
@@ -1129,7 +1143,7 @@
             <button class="mtab" data-m="case" onclick="showIntake('case')">New case</button>
             <button class="mtab on" data-m="sighting" onclick="showIntake('sighting')">Report a sighting</button>
           </div>
-          <div class="kicker">Reverse search · match a sighting</div>
+          <div class="kicker">Saw someone? · match against open cases</div>
           <h1>Report a sighting</h1>
           <p class="sub">Saw someone who might be a missing person? Describe what you saw and LifeFind checks it against the open cases it knows. This does not contact anyone — if it's urgent, call your local emergency number.</p>
           <div class="field"><label>Where did you see them?</label><input id="s_location" /></div>
@@ -1366,8 +1380,8 @@
       <!-- ============ HANDOFF ============ -->
       <section id="pageHandoff" class="page hidden">
         <div class="handoff-intro">
-          <div class="hi-k">▣ Hand off to the people who can act</div>
-          <p>LifeFind only aggregates <b>public</b> signal. It is decision support for searchers — <b>not</b> a substitute for an official investigation. Report to and verify with the official channels below; in an emergency call your local emergency number.</p>
+          <div class="hi-k">▣ Hand the case to the officials who can act</div>
+          <p>This is where the bridge completes: the family's case — ranked, corroborated and sourced — goes to the <b>authorities</b>. LifeFind only aggregates <b>public</b> signal and is <b>not</b> a substitute for an official investigation. Report to and verify with the official channels below; in an emergency call your local emergency number.</p>
         </div>
         <div class="handoff-grid">
           <div class="panel handoff-panel">
@@ -1511,14 +1525,16 @@ fetch("/api/health").then(r=>r.json()).then(h=>{ SV=!!h.sync; useLive=!!h.live_d
     document.querySelectorAll('.mtab[data-m="sighting"]').forEach(t=>{ t.style.display="none"; });
   }
 }).catch(()=>{});
-// Groq AI status strip — shows whether narration is on and, when off, exactly why
+// AI plain-language summaries are a cosmetic extra (the engine decides everything without them).
+// Never show families/officials an alarming "AI offline / no key" banner — only surface a quiet
+// positive note when it's genuinely ON (a key is set on the deployment).
 function renderAiStatus(h){
   const box=$("aiStatus"); if(!box) return;
-  if(sessionStorage.getItem("aiStatusDismissed")){ box.hidden=true; return; }
   const st=(h&&h.narrate_status)||{on:!!(h&&h.narrate),reason:""};
-  box.className="ai-status "+(st.on?"up":"down"); box.hidden=false;
-  $("aiStatusTxt").textContent=st.on ? `Groq AI narration active${st.model?" · "+st.model:""}` : "Groq AI narration offline";
-  $("aiStatusWhy").textContent=st.reason||"";
+  if(!st.on || sessionStorage.getItem("aiStatusDismissed")){ box.hidden=true; return; }
+  box.className="ai-status up"; box.hidden=false;
+  $("aiStatusTxt").textContent=`AI plain-language summaries on${st.model?" · "+st.model:""}`;
+  $("aiStatusWhy").textContent="";
 }
 function dismissAiStatus(){ sessionStorage.setItem("aiStatusDismissed","1"); const b=$("aiStatus"); if(b) b.hidden=true; }
 function toggleLive(){ useLive=!useLive; updateSrcToggle(); }
