@@ -10,23 +10,26 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
-    /* ---- Aurora Intelligence palette ---- */
-    --bg:#F4F7FB; --bg-2:#EEF3FA;
-    --card:rgba(255,255,255,.78); --card-2:rgba(255,255,255,.92); --card-solid:#FFFFFF;
-    --glass-border:rgba(255,255,255,.7);
-    --line:rgba(15,23,42,.08); --line-2:rgba(15,23,42,.15);
+    /* ---- LifeFind dashboard palette (light · navy sidebar · blue accent) ---- */
+    --bg:#F3F5F9; --bg-2:#E9EDF3;
+    --card:#FFFFFF; --card-2:#F7F9FC; --card-solid:#FFFFFF;
+    --glass-border:#E8ECF2;
+    --line:#EDF0F5; --line-2:#DEE4EC;
     --ink:#0F172A; --muted:#64748B; --faint:#94A3B8;
 
     --primary:#2563EB; --primary-2:#1D4ED8; --cyan:#06B6D4;
     --green:#22C55E; --warn:#F59E0B; --red:#EF4444; --violet:#8B5CF6;
     /* semantic aliases kept so every inherited component rule lands on-theme */
-    --amber:#2563EB;            /* "priority / strong" now reads brand-blue */
+    --amber:#2563EB;            /* "priority / strong" reads brand-blue */
     --accent:#2563EB;           /* per-category accent, overridden in JS */
 
-    --grad:linear-gradient(120deg,#2563EB 0%,#3B82F6 45%,#06B6D4 100%);
-    --shadow:0 14px 40px -20px rgba(31,45,80,.35);
-    --shadow-lg:0 36px 90px -40px rgba(31,45,80,.5);
-    --glow:0 0 0 1px rgba(37,99,235,.12), 0 18px 50px -22px rgba(37,99,235,.45);
+    /* dark navy sidebar (matches the dashboard mockup) */
+    --nav:#0D1526; --nav-2:#121C30; --nav-ink:#E7ECF3; --nav-muted:#8492A8; --nav-line:rgba(255,255,255,.07);
+
+    --grad:linear-gradient(120deg,#2563EB 0%,#3B82F6 100%);
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 10px 28px -16px rgba(16,24,40,.18);
+    --shadow-lg:0 24px 60px -28px rgba(16,24,40,.30);
+    --glow:0 0 0 1px rgba(37,99,235,.16), 0 14px 36px -18px rgba(37,99,235,.4);
     --r:18px; --r-sm:12px;
 
     --display:"Space Grotesk","Segoe UI",system-ui,sans-serif;
@@ -36,13 +39,11 @@
   *{ box-sizing:border-box; }
   body{ margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
     font-family:var(--body); font-size:14px; -webkit-font-smoothing:antialiased; letter-spacing:.1px; overflow-x:hidden; }
-  /* ---- Aurora background: three soft colour clouds, barely there ---- */
+  /* ---- flat dashboard surface, the faintest blue wash ---- */
   body::before{ content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
-      radial-gradient(620px 480px at 14% 4%, rgba(37,99,235,.13), transparent 60%),
-      radial-gradient(680px 560px at 88% 0%, rgba(6,182,212,.12), transparent 62%),
-      radial-gradient(720px 620px at 70% 108%, rgba(139,92,246,.10), transparent 60%),
-      radial-gradient(560px 520px at 0% 92%, rgba(37,99,235,.08), transparent 60%),
+      radial-gradient(720px 420px at 100% -8%, rgba(37,99,235,.05), transparent 60%),
+      radial-gradient(620px 420px at 0% 104%, rgba(6,182,212,.04), transparent 60%),
       var(--bg); }
   .mono{ font-family:var(--mono); }
   .hidden{ display:none !important; }
@@ -51,28 +52,33 @@
   .shell{ display:flex; min-height:100vh; }
 
   /* ---- sidebar ---- */
-  .sidebar{ position:sticky; top:0; align-self:flex-start; height:100vh; width:236px; flex:none;
-    display:flex; flex-direction:column; padding:22px 16px; gap:8px;
-    background:rgba(255,255,255,.62); backdrop-filter:blur(22px) saturate(150%);
-    border-right:1px solid var(--line); z-index:1000; }
-  .brand{ display:flex; align-items:center; gap:12px; padding:6px 8px 20px; }
-  .brand svg{ width:34px; height:34px; }
-  .brand-name{ font-family:var(--display); font-weight:700; letter-spacing:.5px; font-size:21px; color:var(--ink); }
+  .sidebar{ position:sticky; top:0; align-self:flex-start; height:100vh; width:244px; flex:none;
+    display:flex; flex-direction:column; padding:20px 14px; gap:5px;
+    background:var(--nav); border-right:1px solid var(--nav-line); z-index:1000; }
+  .brand{ display:flex; align-items:center; gap:11px; padding:4px 8px 16px; border-bottom:1px solid var(--nav-line); }
+  .brand svg{ width:32px; height:32px; }
+  .brand-name{ font-family:var(--display); font-weight:700; letter-spacing:.4px; font-size:20px; color:#fff; }
   .brand-name b{ background:var(--grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-  .nav{ display:flex; flex-direction:column; gap:4px; }
+  .nav{ display:flex; flex-direction:column; gap:3px; margin-top:8px; }
   .nav-item{ display:flex; align-items:center; gap:12px; text-align:left; cursor:pointer; width:100%;
-    font-family:var(--body); font-size:13.5px; font-weight:600; color:var(--muted);
-    background:transparent; border:1px solid transparent; border-radius:13px; padding:11px 13px; transition:.18s; }
-  .nav-item .ni-ic{ width:22px; height:22px; display:flex; align-items:center; justify-content:center;
-    font-size:14px; color:var(--faint); transition:.18s; }
-  .nav-item:hover{ color:var(--ink); background:rgba(37,99,235,.06); }
-  .nav-item:hover .ni-ic{ color:var(--primary); }
-  .nav-item.on{ color:var(--primary); background:var(--card-solid); border-color:rgba(37,99,235,.18);
-    box-shadow:var(--glow); }
-  .nav-item.on .ni-ic{ color:var(--primary); }
-  .sidebar.locked .nav-item[data-locked]{ opacity:.38; pointer-events:none; filter:grayscale(.4); }
-  .nav-foot{ margin-top:auto; font-size:10.5px; line-height:1.6; color:var(--faint); padding:14px 10px 4px;
-    border-top:1px solid var(--line); }
+    font-family:var(--body); font-size:13.5px; font-weight:600; color:var(--nav-muted);
+    background:transparent; border:1px solid transparent; border-radius:11px; padding:10px 13px; transition:.16s; }
+  .nav-item .ni-ic{ width:20px; height:20px; display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--nav-muted); transition:.16s; }
+  .nav-item:hover{ color:#fff; background:rgba(255,255,255,.06); }
+  .nav-item:hover .ni-ic{ color:#fff; }
+  .nav-item.on{ color:#fff; background:var(--primary); border-color:transparent;
+    box-shadow:0 10px 22px -10px rgba(37,99,235,.75); }
+  .nav-item.on .ni-ic{ color:#fff; }
+  .sidebar.locked .nav-item[data-locked]{ opacity:.4; pointer-events:none; }
+  /* account chip (mockup) */
+  .nav-user{ margin-top:auto; display:flex; align-items:center; gap:10px; padding:11px 10px 12px; border-top:1px solid var(--nav-line); }
+  .nav-user .av{ width:34px; height:34px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:700; font-size:12px; color:#fff; background:var(--grad); }
+  .nav-user .nu-name{ font-size:12.5px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nav-user .nu-role{ font-size:10.5px; color:var(--nav-muted); }
+  .nav-foot{ font-size:10px; line-height:1.55; color:var(--nav-muted); opacity:.65; padding:8px 10px 2px; }
+  .sidebar:not(.locked) .nav-foot{ margin-top:0; }
 
   .content{ flex:1; min-width:0; display:flex; flex-direction:column; }
 
@@ -110,6 +116,136 @@
   .ai-status .ai-x:hover{ color:var(--ink); background:rgba(15,23,42,.05); }
 
   main{ padding:26px; }
+
+  /* ================= DASHBOARD (Overview / shared) ================= */
+  .dash-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+  .dash-head h1{ font-family:var(--display); font-size:24px; font-weight:700; letter-spacing:-.4px; margin:0; }
+  .dash-head .dh-sub{ color:var(--muted); font-size:13px; margin-top:5px; }
+  .dash-head .dh-sub b{ color:var(--ink); }
+  .dash-head .dh-right{ display:flex; align-items:center; gap:10px; }
+  .live-pill{ display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:600; padding:7px 13px; border-radius:30px;
+    border:1px solid var(--line-2); background:var(--card); color:var(--muted); white-space:nowrap; }
+  .live-pill .lp-dot{ width:8px; height:8px; border-radius:50%; background:var(--green); animation:spulse 1.7s infinite; }
+  .live-pill.demo .lp-dot{ background:var(--warn); animation:none; }
+  .ico-btn{ width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    background:var(--card); border:1px solid var(--line-2); color:var(--muted); font-size:15px; transition:.15s; }
+  .ico-btn:hover{ color:var(--primary); border-color:var(--primary); }
+
+  .stat-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:18px; }
+  .stat{ background:var(--card); border:1px solid var(--glass-border); border-radius:16px; padding:17px 18px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:12px; }
+  .stat .s-top{ display:flex; align-items:center; justify-content:space-between; }
+  .stat .s-ic{ width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+  .s-ic.b1{ background:rgba(37,99,235,.1); color:var(--primary); }
+  .s-ic.b2{ background:rgba(6,182,212,.12); color:#0e7490; }
+  .s-ic.b3{ background:rgba(139,92,246,.12); color:var(--violet); }
+  .s-ic.b4{ background:rgba(34,197,94,.12); color:#16a34a; }
+  .s-trend{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; color:var(--muted); background:var(--card-2); border:1px solid var(--line); }
+  .s-trend.up{ color:#16a34a; background:rgba(34,197,94,.1); border-color:rgba(34,197,94,.2); }
+  .stat .s-val{ font-family:var(--display); font-size:30px; font-weight:700; letter-spacing:-.6px; line-height:1; }
+  .stat .s-lab{ font-size:10px; color:var(--faint); text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-top:-4px; }
+  .stat .s-sub{ font-size:11.5px; color:var(--muted); }
+
+  .dash-grid{ display:grid; grid-template-columns:1.45fr 1fr; gap:16px; align-items:start; }
+  .dash-col{ display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .d-card{ background:var(--card); border:1px solid var(--glass-border); border-radius:16px; box-shadow:var(--shadow); overflow:hidden; }
+  .d-card .dc-h{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 18px; border-bottom:1px solid var(--line); }
+  .dc-h .dc-t{ font-size:12.5px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:8px; }
+  .dc-h .dc-c{ font-size:11px; color:var(--faint); }
+  .dc-link{ font-size:11px; font-weight:600; color:var(--primary); cursor:pointer; background:none; border:none; padding:0; }
+  .dc-link:hover{ text-decoration:underline; }
+  .dc-body{ padding:16px 18px; }
+
+  /* priority alert */
+  .alert-card{ background:linear-gradient(180deg, rgba(37,99,235,.05), transparent); }
+  .alert-top{ display:flex; align-items:center; gap:8px; font-size:10.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--red); margin-bottom:14px; }
+  .alert-top .a-dot{ width:8px; height:8px; border-radius:50%; background:var(--red); box-shadow:0 0 8px var(--red); }
+  .alert-body{ display:flex; gap:16px; align-items:center; }
+  .alert-av{ width:64px; height:64px; border-radius:16px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:700; font-size:24px; color:#fff; background:var(--grad); box-shadow:0 12px 26px -12px rgba(37,99,235,.6); }
+  .alert-info{ flex:1; min-width:0; }
+  .alert-info .ai-cat{ font-size:11px; font-weight:700; color:var(--primary); }
+  .alert-info h3{ font-family:var(--display); font-size:19px; margin:2px 0 4px; }
+  .alert-info .ai-meta{ font-size:12px; color:var(--muted); }
+  .alert-stats{ display:flex; gap:22px; margin:16px 0 4px; padding-top:14px; border-top:1px solid var(--line); }
+  .alert-stats .as{ }
+  .alert-stats .as-v{ font-family:var(--display); font-size:18px; font-weight:700; }
+  .alert-stats .as-k{ font-size:10px; color:var(--faint); text-transform:uppercase; letter-spacing:.8px; font-weight:700; }
+
+  /* compact list rows (recent leads / activity) */
+  .mlist{ display:flex; flex-direction:column; }
+  .mrow{ display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
+  .mrow:first-child{ border-top:none; }
+  .mrow .m-ic{ width:34px; height:34px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; font-size:14px;
+    background:var(--card-2); border:1px solid var(--line); color:var(--muted); }
+  .mrow .m-main{ flex:1; min-width:0; }
+  .mrow .m-t{ font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mrow .m-s{ font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mrow .m-tag{ font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; padding:4px 9px; border-radius:20px; flex:none; }
+  .m-tag.strong{ color:var(--primary); background:rgba(37,99,235,.1); }
+  .m-tag.promising{ color:#0e7490; background:rgba(6,182,212,.12); }
+  .m-tag.watch{ color:var(--faint); background:var(--card-2); }
+  .mrow .m-time{ font-family:var(--mono); font-size:10.5px; color:var(--faint); flex:none; }
+  .mini-tiles{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .mtile{ background:var(--card-2); border:1px solid var(--line); border-radius:12px; padding:13px 14px; }
+  .mtile .mt-v{ font-family:var(--display); font-size:17px; font-weight:700; }
+  .mtile .mt-k{ font-size:10.5px; color:var(--muted); margin-top:2px; }
+  .dash-empty{ font-size:12px; color:var(--faint); padding:8px 0; }
+  @media(max-width:1100px){ .stat-row{ grid-template-columns:repeat(2,1fr); } .dash-grid{ grid-template-columns:1fr; } }
+
+  /* ================= CCTV ANALYSIS page ================= */
+  .cctv-honest{ display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:14px; margin-bottom:16px;
+    background:rgba(37,99,235,.06); border:1px solid rgba(37,99,235,.2); font-size:12.5px; color:var(--primary-2); line-height:1.55; }
+  .cctv-honest .ch-ic{ font-size:15px; color:var(--primary); flex:none; margin-top:1px; }
+  .cctv-honest b{ color:var(--primary); }
+  .demo-banner{ padding:12px 16px; border-radius:14px; margin-bottom:16px; font-size:12px; line-height:1.5;
+    background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); color:#b45309; }
+  .demo-banner b{ color:#92400e; }
+  .cctv-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; }
+  .cctv-card{ display:flex; align-items:center; gap:12px; background:var(--card-2); border:1px solid var(--line); border-radius:13px; padding:13px 14px; }
+  .cctv-card .cc-ic{ width:38px; height:38px; border-radius:11px; flex:none; display:flex; align-items:center; justify-content:center; font-size:17px;
+    background:rgba(34,197,94,.12); color:#16a34a; }
+  .cctv-card .cc-main{ flex:1; min-width:0; }
+  .cctv-card .cc-n{ font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cctv-card .cc-k{ font-size:10.5px; color:var(--muted); }
+  .cctv-card .cc-d{ font-family:var(--mono); font-size:11px; color:var(--faint); flex:none; text-align:right; }
+  .cctv-card .cc-d b{ color:var(--primary); font-weight:700; display:block; font-size:13px; }
+
+  .cctv-demo-grid{ display:grid; grid-template-columns:1.5fr 1fr; gap:16px; align-items:start; }
+  .sim-badge{ font-family:var(--mono); font-size:8.5px; letter-spacing:1px; text-transform:uppercase; padding:3px 7px; border-radius:20px;
+    background:rgba(245,158,11,.15); color:#b45309; border:1px solid rgba(245,158,11,.3); margin-left:8px; }
+  .cam-stage{ position:relative; aspect-ratio:16/10; margin:0; overflow:hidden;
+    background:
+      radial-gradient(120px 80px at 30% 30%, rgba(120,140,180,.25), transparent 70%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 2px, transparent 2px 4px),
+      linear-gradient(160deg,#10182b,#1b2740 60%,#0c1424); }
+  .cam-stage::after{ content:""; position:absolute; left:0; right:0; bottom:0; height:42%;
+    background:linear-gradient(0deg, rgba(120,150,200,.18), transparent); }
+  .cam-box{ position:absolute; left:46%; top:34%; width:84px; height:150px; border:2px solid #34D399; border-radius:4px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 0 18px rgba(52,211,153,.4); animation:cambob 3.5s ease-in-out infinite; }
+  @keyframes cambob{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(-14px); } }
+  .cam-tag{ position:absolute; top:-24px; left:-2px; white-space:nowrap; font-family:var(--mono); font-size:9.5px; font-weight:600;
+    background:#34D399; color:#04231a; padding:3px 7px; border-radius:5px 5px 5px 0; }
+  .cam-scan{ position:absolute; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(52,211,153,.8),transparent);
+    animation:camscan 3s linear infinite; }
+  @keyframes camscan{ 0%{ top:0; } 100%{ top:100%; } }
+  .cam-meta{ position:absolute; left:10px; top:9px; font-family:var(--mono); font-size:9.5px; color:rgba(255,255,255,.7);
+    background:rgba(0,0,0,.4); padding:3px 7px; border-radius:5px; }
+  .cam-rec{ position:absolute; right:10px; top:9px; display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9.5px; color:#fff;
+    background:rgba(0,0,0,.4); padding:3px 8px; border-radius:5px; }
+  .cam-rec i{ width:7px; height:7px; border-radius:50%; background:#FB7185; animation:spulse 1.4s infinite; }
+  .cam-controls{ display:flex; flex-wrap:wrap; gap:7px; padding:13px 16px; border-top:1px solid var(--line); }
+  .cam-ctl{ font-size:10.5px; font-weight:600; color:var(--muted); background:var(--card-2); border:1px solid var(--line); border-radius:8px; padding:6px 10px; }
+  .cam-ctl.on{ color:var(--primary); border-color:rgba(37,99,235,.35); background:rgba(37,99,235,.08); }
+  .cam-wall{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .cam-tile{ position:relative; aspect-ratio:16/11; border-radius:10px; overflow:hidden; border:1px solid var(--line);
+    background:linear-gradient(160deg,#172238,#0e1626); }
+  .cam-tile .ct-grid{ position:absolute; inset:0; background:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 3px, transparent 3px 6px); }
+  .cam-tile .ct-name{ position:absolute; left:7px; bottom:6px; font-family:var(--mono); font-size:8.5px; color:rgba(255,255,255,.75); }
+  .cam-tile .ct-live{ position:absolute; right:6px; top:6px; display:flex; align-items:center; gap:4px; font-family:var(--mono); font-size:7.5px; color:#fff; }
+  .cam-tile .ct-live i{ width:5px; height:5px; border-radius:50%; background:#FB7185; }
+  .cam-tile.hot{ outline:2px solid #34D399; outline-offset:-2px; }
+  @media(max-width:1100px){ .cctv-demo-grid{ grid-template-columns:1fr; } }
 
   /* ================= GLASS PANEL PRIMITIVE ================= */
   .panel{ background:var(--card); backdrop-filter:blur(20px) saturate(150%); border:1px solid var(--glass-border);
@@ -510,9 +646,11 @@
 
   /* ---- data-source toggle ---- */
   .src-toggle{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0 0 22px;
-    padding:14px 16px; border-radius:14px; background:var(--card-2); border:1px solid var(--line); }
+    padding:14px 16px 14px 18px; border-radius:14px; background:var(--card-2); border:1px solid var(--line-2);
+    border-left:3px solid var(--primary); box-shadow:var(--shadow); }
+  .src-toggle.online{ border-left-color:var(--green); }
   .st-info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
-  .st-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.4px; color:var(--faint); font-weight:700; }
+  .st-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.4px; color:var(--primary); font-weight:700; }
   .st-sub{ font-size:11.5px; color:var(--muted); }
   .st-switch{ display:flex; align-items:center; gap:9px; cursor:pointer; background:transparent; border:none; padding:0; flex:none; }
   .st-text{ font-family:var(--mono); font-size:10px; letter-spacing:1px; color:var(--faint); width:30px; text-align:right; }
@@ -705,12 +843,22 @@
       <div class="brand-name">Life<b>Find</b></div>
     </div>
     <nav class="nav">
-      <button class="nav-item on" data-p="intake" onclick="showPage('intake')"><span class="ni-ic">◎</span><span>New Search</span></button>
-      <button class="nav-item" data-p="map" data-locked onclick="showPage('map')"><span class="ni-ic">◍</span><span>Operations</span></button>
-      <button class="nav-item" data-p="analysis" data-locked onclick="showPage('analysis')"><span class="ni-ic">◈</span><span>Intelligence</span></button>
-      <button class="nav-item" data-p="handoff" data-locked onclick="showPage('handoff')"><span class="ni-ic">⤴</span><span>Handoff</span></button>
-      <button class="nav-item" data-p="ask" data-locked onclick="showPage('ask')"><span class="ni-ic">✦</span><span>Ask</span></button>
+      <button class="nav-item on" data-p="intake" onclick="showPage('intake')" title="Start a new missing-person case, or report a sighting to match against open cases."><span class="ni-ic">◎</span><span>New Search</span></button>
+      <button class="nav-item" data-p="overview" data-locked onclick="showPage('overview')" title="Case at a glance: status, the key numbers, priority alert and recent activity."><span class="ni-ic">▦</span><span>Overview</span></button>
+      <button class="nav-item" data-p="map" data-locked onclick="showPage('map')" title="Live operations map: lead density, priority zones, search-radius rings and the activity cluster."><span class="ni-ic">◍</span><span>Search Operations</span></button>
+      <button class="nav-item" data-p="analysis" data-locked onclick="showPage('analysis')" title="Deterministic intelligence: priority zones, cross-source corroboration, timeline and the entity network."><span class="ni-ic">◈</span><span>Intelligence</span></button>
+      <button class="nav-item" data-p="cctv" data-locked onclick="showPage('cctv')" title="Where to go request CCTV footage near the last-seen point. Real OpenStreetMap sources, plus an optional demo camera view."><span class="ni-ic">🎥</span><span>CCTV Analysis</span></button>
+      <button class="nav-item" data-p="handoff" data-locked onclick="showPage('handoff')" title="Hand off to the authorities and export the case (CSV, printable report, share links)."><span class="ni-ic">⤴</span><span>Handoff</span></button>
+      <button class="nav-item" data-p="ask" data-locked onclick="showPage('ask')" title="Ask the case in plain language — every answer is computed from this case's scored leads."><span class="ni-ic">✦</span><span>Ask</span></button>
     </nav>
+    <div style="flex:1 1 auto"></div>
+    <div class="nav-user" id="navUser" hidden>
+      <div class="av" id="navAv">—</div>
+      <div style="min-width:0">
+        <div class="nu-name" id="navName">—</div>
+        <div class="nu-role">Active case</div>
+      </div>
+    </div>
     <div class="nav-foot">Decision support for searchers — public signal only. Never a replacement for the police.</div>
   </aside>
 
@@ -749,12 +897,12 @@
           <div class="kicker">Aurora Intelligence · new case</div>
           <h1 id="formTitle">New case · missing child</h1>
           <p class="sub">LifeFind triages scattered <b>public</b> signal into ranked, corroborated leads — to help families, search teams and the authorities act faster. It assists the people searching; it never replaces the police.</p>
-          <div class="src-toggle" id="srcToggle">
+          <div class="src-toggle" id="srcToggle" title="ONLINE / OFFLINE switch for this case.&#10;&#10;DEMO (offline): instant bundled sample leads — perfect for a stage or no-wifi. No internet used.&#10;LIVE (online): hits the real public sources (Google News · Bing · GDELT · Reddit) + global geocoding. Slower, and on a serverless host can occasionally time out.&#10;&#10;Set it before you start the case.">
             <div class="st-info">
-              <span class="st-label">Data source</span>
+              <span class="st-label">⚡ Data source · online mode</span>
               <span class="st-sub" id="stSub">Demo data — instant, bundled sample leads</span>
             </div>
-            <button type="button" class="st-switch" id="stSwitch" role="switch" aria-checked="false" aria-label="Toggle live data sources" onclick="toggleLive()">
+            <button type="button" class="st-switch" id="stSwitch" role="switch" aria-checked="false" aria-label="Toggle live (online) data sources" onclick="toggleLive()">
               <span class="st-text" id="stText">DEMO</span>
               <span class="st-track"><span class="st-knob"></span></span>
             </button>
@@ -787,7 +935,7 @@
             </div>
           </div>
 
-          <button class="btn" id="launch">◉&nbsp;&nbsp;Start case &amp; search public sources</button>
+          <button class="btn" id="launch" title="Start the case: sweep the selected data source (Demo or Live), score and corroborate every lead, and open the live console.">◉&nbsp;&nbsp;Start case &amp; search public sources</button>
           <p class="intake-foot">If someone is in immediate danger, contact your local emergency number first.</p>
         </section>
 
@@ -805,13 +953,62 @@
             <div class="field"><label>Clothing</label><input id="s_clothing" /></div>
             <div class="field"><label>Approx age</label><input id="s_age" /></div>
           </div>
-          <button class="btn" onclick="submitSighting()">◎&nbsp;&nbsp;Check against open cases</button>
+          <button class="btn" onclick="submitSighting()" title="Match what you saw against the open cases LifeFind knows. This contacts no one — if it's urgent, call your local emergency number.">◎&nbsp;&nbsp;Check against open cases</button>
           <div id="sightingResults" class="s-results"></div>
         </section>
       </div>
 
+      <!-- ============ OVERVIEW (home dashboard) ============ -->
+      <section id="pageOverview" class="page hidden">
+        <div class="dash-head">
+          <div>
+            <h1 id="ovTitle">Search console</h1>
+            <div class="dh-sub" id="ovSub">Public-signal triage for one active case.</div>
+          </div>
+          <div class="dh-right">
+            <span class="live-pill" id="ovMode" title="Data source for this case. Live = real public sources (Google News · Bing · GDELT · Reddit). Demo = bundled sample leads. Set it on the New Search screen before starting a case."><span class="lp-dot"></span><span id="ovModeTxt">LIVE</span></span>
+            <button class="ico-btn" title="Hand off to the authorities and export this case." onclick="showPage('handoff')">⤴</button>
+            <button class="ico-btn" title="Start a fresh search (discards this case)." onclick="resetOp()">＋</button>
+          </div>
+        </div>
+        <div class="stat-row" id="ovStats"></div>
+        <div class="dash-grid">
+          <div class="dash-col">
+            <div class="d-card alert-card">
+              <div class="dc-body" id="ovAlert"></div>
+            </div>
+            <div class="d-card">
+              <div class="dc-h"><span class="dc-t">◍ Recent leads</span><button class="dc-link" onclick="showPage('map')" title="Open the live operations map with the full lead feed.">Open Operations →</button></div>
+              <div class="dc-body"><div class="mlist" id="ovLeads"></div></div>
+            </div>
+          </div>
+          <div class="dash-col">
+            <div class="d-card">
+              <div class="dc-h"><span class="dc-t">✦ Live activity</span><span class="dc-c" id="ovActC">—</span></div>
+              <div class="dc-body"><div class="mlist" id="ovActivity"></div></div>
+            </div>
+            <div class="d-card">
+              <div class="dc-h"><span class="dc-t">◈ Operational read-out</span><button class="dc-link" onclick="showPage('analysis')" title="Open the full deterministic intelligence view.">Intelligence →</button></div>
+              <div class="dc-body"><div class="mini-tiles" id="ovTiles"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ============ OPERATIONS (live map) ============ -->
       <section id="pageMap" class="page hidden">
+        <div class="dash-head">
+          <div>
+            <h1>Search Operations</h1>
+            <div class="dh-sub">Live lead density, priority zones and the search area — updating as public sources are swept.</div>
+          </div>
+          <div class="dh-right">
+            <button class="ico-btn" title="Find CCTV / footage sources near the last-seen point." onclick="showPage('cctv')">🎥</button>
+            <button class="ico-btn" title="Share a live operational link with police or your search team." onclick="shareCase()">⤴</button>
+            <button class="ico-btn" title="Open the printable case report (hand to a coordinator)." onclick="openReport()">🖨</button>
+            <button class="ico-btn" title="Start a fresh search (discards this case)." onclick="resetOp()">＋</button>
+          </div>
+        </div>
         <div class="cc-grid">
           <aside class="panel cc-left">
             <div class="p-h"><span class="t">Subject Profile</span></div>
@@ -819,7 +1016,7 @@
           </aside>
 
           <section class="panel cc-center">
-            <div class="p-h"><span class="t">Search Operations View</span><span style="display:flex;align-items:center;gap:11px;margin-left:auto"><span class="dx-bar hidden" id="dxBar"><button class="dx-btn replay" onclick="replayInvestigation()">▶ Replay</button><button class="dx-btn sim" onclick="openSimulate()">🔮 Add evidence</button></span><span class="c" id="mapStat">initialising…</span></span></div>
+            <div class="p-h"><span class="t">Search Operations View</span><span style="display:flex;align-items:center;gap:11px;margin-left:auto"><span class="dx-bar hidden" id="dxBar"><button class="dx-btn replay" onclick="replayInvestigation()" title="Replay the investigation: watch the search area grow from t=0 to now as leads arrived.">▶ Replay</button><button class="dx-btn sim" onclick="openSimulate()" title="Counterfactual: inject a hypothetical sighting and watch the priority zone, confidence and search area recompute deterministically.">🔮 Add evidence</button></span><span class="c" id="mapStat">initialising…</span></span></div>
             <div class="map-wrap">
               <div class="map-cap">LIVE LEAD DENSITY</div>
               <div id="map"></div>
@@ -872,7 +1069,7 @@
               <div id="aiCmdZones"></div>
               <div class="ai-assess" id="aiAssess"></div>
               <div class="ai-action" id="aiAction"></div>
-              <button class="plan-btn" onclick="launchPlan()">◈ Generate Search Plan</button>
+              <button class="plan-btn" onclick="launchPlan()" title="Turn the priority zones into a deployable search plan (team assignments + briefing) to hand a coordinator.">◈ Generate Search Plan</button>
             </div>
           </div>
           <div class="panel">
@@ -919,6 +1116,64 @@
        </div>
       </section>
 
+      <!-- ============ CCTV ANALYSIS ============ -->
+      <section id="pageCctv" class="page hidden">
+        <div class="dash-head">
+          <div>
+            <h1>CCTV Analysis</h1>
+            <div class="dh-sub">Where to go request footage near the last-seen point — plus an optional demo camera wall.</div>
+          </div>
+          <div class="dh-right">
+            <div class="seg" style="margin:0">
+              <button class="seg-btn on" id="cctvTabReal" onclick="cctvMode('real')" title="Real, honest output: public places near the last-seen point that commonly run CCTV (OpenStreetMap). These are locations to go request footage — not live feeds.">Footage sources</button>
+              <button class="seg-btn" id="cctvTabDemo" onclick="cctvMode('demo')" title="A simulated camera wall for stage demos — clearly marked, and NOT real detection.">Demo camera wall</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- REAL: footage-source discovery -->
+        <div id="cctvReal">
+          <div class="cctv-honest">
+            <span class="ch-ic">ⓘ</span>
+            <div><b>Not live feeds, and not face recognition.</b> LifeFind lists public places that commonly run CCTV within walking distance of the last-seen point, so a search team knows where to go and request footage through the proper legal channel.</div>
+          </div>
+          <div class="stat-row" id="cctvStats"></div>
+          <div class="d-card">
+            <div class="dc-h"><span class="dc-t">🎥 Nearby footage sources</span>
+              <button class="dc-link" id="cctvBtn" onclick="loadCCTV()" title="Query OpenStreetMap for petrol bunks, ATMs, stations, banks and shops likely to have CCTV near the last-seen point.">Find sources →</button></div>
+            <div class="dc-body"><div class="cctv-grid" id="cctvGrid"><div class="dash-empty">Tap “Find sources” to map petrol bunks, ATMs, stations, banks and shops likely to have CCTV near the last-seen point. They also drop as pins on the Operations map.</div></div></div>
+          </div>
+        </div>
+
+        <!-- DEMO: simulated camera wall (clearly labelled) -->
+        <div id="cctvDemo" class="hidden">
+          <div class="demo-banner">⚠ <b>DEMO · SIMULATED.</b> This camera wall and the detection overlay are mock visuals for presentations only. LifeFind does <b>not</b> ingest camera feeds or run face / person recognition — the real tool finds <i>where</i> to request footage (see “Footage sources”).</div>
+          <div class="cctv-demo-grid">
+            <div class="d-card">
+              <div class="dc-h"><span class="dc-t">AI analysis<span class="sim-badge">simulated</span></span><span class="dc-c" id="camMainName">cam · 03:46:12</span></div>
+              <div class="cam-stage">
+                <div class="cam-meta" id="camMainMeta">CAM-01 · Beach Road</div>
+                <div class="cam-rec"><i></i>REC</div>
+                <div class="cam-scan"></div>
+                <div class="cam-box"><span class="cam-tag">person · matches described clothing · 92%</span></div>
+              </div>
+              <div class="cam-controls">
+                <span class="cam-ctl on">◉ Person</span>
+                <span class="cam-ctl on">◉ Clothing match</span>
+                <span class="cam-ctl">○ Vehicle</span>
+                <span class="cam-ctl on">◉ Child</span>
+                <span class="cam-ctl">⏯ Playback</span>
+                <span class="cam-ctl">⬇ Export clip</span>
+              </div>
+            </div>
+            <div class="d-card">
+              <div class="dc-h"><span class="dc-t">Camera wall</span><span class="dc-c">6 simulated feeds</span></div>
+              <div class="dc-body"><div class="cam-wall" id="camWall"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ============ HANDOFF ============ -->
       <section id="pageHandoff" class="page hidden">
         <div class="handoff-intro">
@@ -929,18 +1184,15 @@
           <div class="panel handoff-panel">
             <div class="p-h"><span class="t">Official channels</span></div>
             <div class="authorities" id="authorities"></div>
-            <div class="cctv-box">
-              <button class="oa-btn" id="cctvBtn" onclick="loadCCTV()">🎥 Find CCTV / footage sources nearby</button>
-              <div class="cctv-list" id="cctvList"></div>
-            </div>
+            <button class="oa-btn" style="margin:12px 13px 14px" onclick="showPage('cctv')" title="Open the CCTV Analysis page to find nearby footage sources to request.">🎥 Find CCTV / footage sources →</button>
           </div>
           <div class="panel handoff-panel">
             <div class="p-h"><span class="t">Share &amp; export</span></div>
             <div class="ops-actions">
-              <button class="oa-btn" id="shareBtn" onclick="shareCase()">⤴ Share operational link (police / team)</button>
-              <button class="oa-btn" id="familyBtn" onclick="shareFamily()">👪 Share calm family view</button>
-              <a class="oa-btn" id="csvLink" href="#" download>⬇ Leads as CSV</a>
-              <a class="oa-btn" id="reportLink" href="#" target="_blank" rel="noopener">🖨 Printable case report</a>
+              <button class="oa-btn" id="shareBtn" onclick="shareCase()" title="Copy a live link police or a search team can open to watch the full leads arrive in real time.">⤴ Share operational link (police / team)</button>
+              <button class="oa-btn" id="familyBtn" onclick="shareFamily()" title="Copy a calm, read-only status link for the family — status and checked areas only, no raw-lead firehose.">👪 Share calm family view</button>
+              <a class="oa-btn" id="csvLink" href="#" download title="Download the ranked leads as a CSV spreadsheet.">⬇ Leads as CSV</a>
+              <a class="oa-btn" id="reportLink" href="#" target="_blank" rel="noopener" title="Open a printable, sourced case report to hand to a coordinator or the police.">🖨 Printable case report</a>
             </div>
             <p class="oa-note">The operational link lets police or a search team watch the full leads as they arrive. The family view is a calmer, read-only status page — no raw-lead firehose. The CSV and printable report give a ranked, sourced summary to act on.</p>
           </div>
@@ -965,7 +1217,7 @@
               <input class="chat-inp" id="chatInp"
                 placeholder="Why this zone?  ·  What should the team check first?  ·  Show me the evidence"
                 onkeydown="if(event.key==='Enter'&&!$('chatBtn').disabled)sendChat()" />
-              <button class="chat-btn" id="chatBtn" onclick="sendChat()">▶ Send</button>
+              <button class="chat-btn" id="chatBtn" onclick="sendChat()" title="Ask the case. The answer is computed from this case's scored leads (optionally rephrased by Groq if a key is set).">▶ Send</button>
             </div>
           </div>
         </div>
@@ -1015,16 +1267,22 @@ window._fusionByLead={}; window._relevance={};
 // Aurora-harmonious per-category accents (keeps the theme cohesive; one gradient discipline)
 const ACCENTS={ child:"#2563EB", dementia:"#06B6D4", disaster:"#3B82F6", tourist:"#22C55E", missing:"#8B5CF6" };
 
-const PAGES={ intake:"intakeWrap", map:"pageMap", analysis:"pageAnalysis", handoff:"pageHandoff", ask:"pageAsk" };
+const PAGES={ intake:"intakeWrap", overview:"pageOverview", map:"pageMap", analysis:"pageAnalysis", cctv:"pageCctv", handoff:"pageHandoff", ask:"pageAsk" };
 function navLocked(){ const s=$("sidebar"); return s && s.classList.contains("locked"); }
 function lockNav(){ const s=$("sidebar"); if(s) s.classList.add("locked"); }
 function unlockNav(){ const s=$("sidebar"); if(s) s.classList.remove("locked"); }
+function initialsOf(name){ const p=(name||"").trim().split(/\s+/).filter(Boolean);
+  return (((p[0]||"")[0]||"")+((p[1]||"")[0]||"")).toUpperCase()||"•"; }
+function populateNavUser(child){ const nu=$("navUser"); if(!nu) return;
+  const nm=(child&&child.name&&child.name.trim())||"Unnamed subject";
+  $("navAv").textContent=initialsOf(nm); $("navName").textContent=nm; nu.hidden=false; }
 function showPage(p){
   if(p!=="intake" && navLocked()) return;   // case pages are gated until a search starts
   Object.entries(PAGES).forEach(([k,id])=>{ const el=$(id); if(el) el.classList.toggle("hidden", k!==p); });
   document.querySelectorAll(".nav-item[data-p]").forEach(s=>s.classList.toggle("on", s.dataset.p===p));
   if(p==="intake") showIntake(intakeMode);
-  if(p==="map"&&map) setTimeout(()=>map.invalidateSize(),50);
+  if(p==="map"&&map) setTimeout(()=>{ map.invalidateSize();
+    if(window._lastCase) updateMap(window._lastCase.leads, window._lastCase.child); },60);
   window.scrollTo(0,0);
 }
 function intakeSeg(s){
@@ -1062,7 +1320,8 @@ function updateSrcToggle(){
   $("stSub").textContent=useLive
     ? "Live public sources — Google News · Bing · GDELT · Reddit (slower, real results)"
     : "Demo data — instant, bundled sample leads";
-  const b=$("modeBadge"); if(b){ b.textContent=useLive?"LIVE SOURCES":"DEMO · OFFLINE"; b.classList.toggle("live", useLive); }
+  const st=$("srcToggle"); if(st) st.classList.toggle("online", useLive);
+  const b=$("modeBadge"); if(b){ b.textContent=useLive?"LIVE · ONLINE":"DEMO · OFFLINE"; b.classList.toggle("live", useLive); }
 }
 function catMeta(k){ return CATS.find(c=>c.key===k)||{label:"person",icon:"👤",accent:"#2563EB"}; }
 function toDateTimePickerValue(v){ return (v||"").trim().replace(" ","T").slice(0,16); }
@@ -1117,7 +1376,7 @@ $("launch").onclick=async()=>{
   child.live=useLive;   // Demo (bundled) vs Live (real public sources) for this search
   const resp=await (await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(child)})).json();
   caseId=resp.case_id||resp.id; _authLoaded=false; setExportLinks();
-  unlockNav(); showPage("map");
+  unlockNav(); populateNavUser(child); showPage("overview");
   $("sysDot").classList.add("scan"); $("sysState").textContent="Scanning";
   dispCount=0; initMap(); setTimeout(()=>map&&map.invalidateSize(),60);
   if(resp.done!==undefined){ window._syncCase=resp; refresh(); }   // serverless: full case in one shot
@@ -1322,23 +1581,54 @@ function renderGraph(g){
 }
 // ---- CCTV / footage-source discovery (OpenStreetMap; not face recognition) ----
 function cctvIcon(){ return L.divIcon({className:"",iconSize:[14,14],iconAnchor:[7,7],html:`<div class="cctvm"></div>`}); }
+const CCTV_ICON={"Petrol bunk":"⛽","ATM":"🏧","Bank":"🏦","Railway station":"🚉","Bus station":"🚌","Public camera":"🎥","Supermarket":"🛒","Shopping mall":"🏬","Market":"🏪"};
 async function loadCCTV(){
-  if(!caseId) return; const btn=$("cctvBtn");
-  btn.disabled=true; btn.textContent="🎥 Searching OpenStreetMap…";
+  if(!caseId) return; const btn=$("cctvBtn"), grid=$("cctvGrid");
+  btn.disabled=true; btn.textContent="Searching…";
+  grid.innerHTML='<div class="dash-empty">Querying OpenStreetMap for footage sources near the last-seen point…</div>';
   try{
     const ch=((window._lastCase||{}).child)||{};
-    if(SV && ch.lat==null){ $("cctvList").innerHTML='<div class="iv-empty">Case is not geolocated.</div>'; btn.textContent="🎥 Find CCTV / footage sources nearby"; btn.disabled=false; return; }
+    if(ch.lat==null){ grid.innerHTML='<div class="dash-empty">This case isn’t geolocated yet — once the last-seen location resolves, footage sources will appear here.</div>'; renderCctvStats(null,ch); btn.textContent="Find sources →"; btn.disabled=false; return; }
     const vurl=SV?`/api/cctv?lat=${ch.lat}&lng=${ch.lng}`:`/api/case/${caseId}/cctv`;
     const out=await (await fetch(vurl)).json();
     const ps=out.places||[];
-    if(!ps.length){ $("cctvList").innerHTML=`<div class="iv-empty">No mapped CCTV-likely places found nearby.</div>`; btn.textContent="🎥 No nearby sources mapped"; }
+    renderCctvStats(ps,ch);
+    if(!ps.length){ grid.innerHTML='<div class="dash-empty">No mapped CCTV-likely places found within walking distance. On the ground, check nearby petrol bunks, ATMs and shops directly.</div>'; }
     else{
-      $("cctvList").innerHTML=`<div class="cctv-note">${escHtml(out.note||"")}</div>`+ps.slice(0,14).map(p=>`<div class="cctv-row"><span class="cctv-k">${escHtml(p.kind)}</span><span class="cctv-n">${escHtml(p.name)}</span><span class="cctv-d">${p.dist_m} m</span></div>`).join("");
+      grid.innerHTML=ps.slice(0,24).map(p=>`<div class="cctv-card"><div class="cc-ic">${CCTV_ICON[p.kind]||"📍"}</div>
+        <div class="cc-main"><div class="cc-n">${escHtml(p.name)}</div><div class="cc-k">${escHtml(p.kind)} · request footage</div></div>
+        <div class="cc-d"><b>${p.dist_m}</b>m</div></div>`).join("");
       if(cctvLayer){ cctvLayer.clearLayers(); ps.forEach(p=>L.marker([p.lat,p.lng],{icon:cctvIcon(),title:`${p.kind}: ${p.name}`}).addTo(cctvLayer)); }
-      btn.textContent=`🎥 ${ps.length} footage sources mapped`;
     }
-  }catch(e){ btn.textContent="🎥 Lookup failed — try again"; }
+    btn.textContent=ps.length?`${ps.length} sources ✓`:"Retry →";
+  }catch(e){ grid.innerHTML='<div class="dash-empty">Lookup failed (the OpenStreetMap mirror may be busy). Try again in a moment.</div>'; btn.textContent="Retry →"; }
   btn.disabled=false;
+}
+function renderCctvStats(ps,ch){
+  const n=ps?ps.length:0, nearest=ps&&ps.length?Math.min(...ps.map(p=>p.dist_m)):null;
+  const kinds=ps?new Set(ps.map(p=>p.kind)).size:0;
+  const centre=((ch&&ch.last_seen_location)||"—").split(",")[0];
+  const stats=[
+    {ic:"🎥",b:"b4",val:ps?n:"—",lab:"Footage sources",sub:"within ~1.2 km"},
+    {ic:"📍",b:"b1",val:nearest!=null?nearest+" m":"—",lab:"Nearest source",sub:"from last seen"},
+    {ic:"⊞",b:"b2",val:ps?kinds:"—",lab:"Source types",sub:"fuel · ATM · transit · retail"},
+    {ic:"◎",b:"b3",val:centre,lab:"Search centre",sub:"last-seen point"},
+  ];
+  $("cctvStats").innerHTML=stats.map(s=>{const big=String(s.val).length>8;return `<div class="stat"><div class="s-top"><div class="s-ic ${s.b}">${s.ic}</div></div>
+    <div class="s-val" style="font-size:${big?'17px':'30px'}">${escHtml(String(s.val))}</div><div class="s-lab">${s.lab}</div><div class="s-sub">${s.sub}</div></div>`;}).join("");
+}
+function cctvMode(m){
+  const real=m==="real";
+  $("cctvReal").classList.toggle("hidden",!real);
+  $("cctvDemo").classList.toggle("hidden",real);
+  $("cctvTabReal").classList.toggle("on",real);
+  $("cctvTabDemo").classList.toggle("on",!real);
+  if(!real) buildCamWall();
+}
+function buildCamWall(){
+  const wall=$("camWall"); if(!wall||wall.dataset.built) return; wall.dataset.built="1";
+  const names=["Beach Road","Light House","Food Court","Parking","Main Gate","Back Area"];
+  wall.innerHTML=names.map((n,i)=>`<div class="cam-tile${i===0?" hot":""}"><div class="ct-grid"></div><div class="ct-live"><i></i>LIVE</div><div class="ct-name">CAM-0${i+1} · ${n}</div></div>`).join("");
 }
 function pulseIcon(k){ return L.divIcon({className:"", iconSize:[16,16], iconAnchor:[8,8],
   html:`<div class="mk mk-${k}"><span class="ring"></span><span class="core"></span></div>`}); }
@@ -1346,6 +1636,12 @@ function crossIcon(){ return L.divIcon({className:"", iconSize:[36,36], iconAnch
   html:`<div class="xh"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="9" fill="none" stroke="#2563EB" stroke-width="2"/><path d="M18 2v8M18 26v8M2 18h8M26 18h8" stroke="#2563EB" stroke-width="2"/></svg></div>`}); }
 function updateMap(leads,child){
   if(!map) return;
+  // The map lives on the Operations page; while another page (e.g. Overview) is
+  // shown the container is 0×0 and leaflet.heat throws on getImageData. Defer the
+  // paint until Operations is opened (showPage repaints from _lastCase).
+  const mc=map.getContainer();
+  if(!mc.offsetWidth || !mc.offsetHeight){ window._mapDirty=true; return; }
+  window._mapDirty=false;
   markerLayer.clearLayers(); zoneLayer.clearLayers();
   const pts=leads.filter(l=>l.lat!=null);
   if(heatLayer){ map.removeLayer(heatLayer); heatLayer=null; }
@@ -1419,7 +1715,68 @@ function renderProfile(ch){
     <div class="prow"><div class="k">Time</div><div class="v mono">${escHtml(ch.last_seen_time||"—")}</div></div>
     <div class="prow"><div class="k">Clothing</div><div class="v"><div class="chips">${clothes}</div></div></div>
     <div class="prow"><div class="k">Distinguishing</div><div class="v">${escHtml(ch.distinguishing_features||"—")}</div></div>
-    <button class="btn ghost" onclick="resetOp()">↩ New operation</button>`;
+    <button class="btn ghost" onclick="resetOp()" title="Discard this case and start a fresh search.">↩ New operation</button>`;
+  populateNavUser(ch);
+}
+
+// ---- Overview home dashboard (deterministic summary of the active case) ----
+function renderOverview(c,zones){
+  if(!$("ovStats")) return;
+  const ch=c.child||{}, z0=zones[0];
+  const cm=catMeta(ch.category||"missing");
+  $("ovTitle").textContent=ch.name||"Active case";
+  $("ovSub").innerHTML=`<b>${escHtml(cm.label)}</b> · last seen ${escHtml(ch.last_seen_location||"—")}`;
+  const live=!!c.live, mp=$("ovMode"); mp.classList.toggle("demo",!live);
+  $("ovModeTxt").textContent=live?"LIVE SOURCES":"DEMO DATA";
+
+  const strong=c.leads.filter(l=>tier(l.match_score).k==="strong").length;
+  const stats=[
+    {ic:"◍",b:"b1",val:c.leads.length,lab:"Leads found",sub:(c.filtered||0)+" filtered as noise"},
+    {ic:"⊞",b:"b2",val:(c.sources_searched||0).toLocaleString(),lab:"Sources scanned",sub:(SOURCES.join(" · ")||"public sources")},
+    {ic:"◈",b:"b3",val:zones.length,lab:"Priority zones",sub:z0?("top: "+z0.place):"awaiting signal"},
+    {ic:"◆",b:"b4",val:strong,lab:"High-confidence",sub:"strong-tier leads"},
+  ];
+  $("ovStats").innerHTML=stats.map(s=>`<div class="stat"><div class="s-top"><div class="s-ic ${s.b}">${s.ic}</div>${s.b==="b4"&&strong?'<span class="s-trend up">▲ strong</span>':""}</div>
+    <div class="s-val">${escHtml(String(s.val))}</div><div class="s-lab">${s.lab}</div><div class="s-sub">${escHtml(String(s.sub))}</div></div>`).join("");
+
+  $("ovAlert").innerHTML=`
+    <div class="alert-top"><span class="a-dot"></span>${z0?"Priority zone identified":(c.done?"No corroborated zone yet":"Aggregating public signal…")}</div>
+    <div class="alert-body">
+      <div class="alert-av">${initialsOf(ch.name)}</div>
+      <div class="alert-info">
+        <div class="ai-cat">${escHtml(cm.icon)} ${escHtml(cm.label)}</div>
+        <h3>${escHtml(ch.name||"Unknown subject")}</h3>
+        <div class="ai-meta">Last seen ${escHtml(ch.last_seen_location||"—")} · ${escHtml(ch.last_seen_time||"—")}</div>
+      </div>
+    </div>
+    <div class="alert-stats">
+      <div class="as"><div class="as-v">${z0?escHtml(z0.place):"—"}</div><div class="as-k">Focus search here</div></div>
+      <div class="as"><div class="as-v">${z0?tier(z0.max).label:"—"}</div><div class="as-k">Confidence</div></div>
+      <div class="as"><div class="as-v">${z0?z0.count:0}</div><div class="as-k">Sources agree</div></div>
+    </div>`;
+
+  const top=[...c.leads].sort((a,b)=>b.match_score-a.match_score).slice(0,4);
+  $("ovLeads").innerHTML=top.length? top.map(l=>{const tg=tier(l.match_score);
+    return `<div class="mrow"><div class="m-ic">◍</div>
+      <div class="m-main"><div class="m-t">${escHtml(l.title||l.source_name||"Lead")}</div>
+        <div class="m-s">${escHtml(l.source_name||"")}${l.place?" · "+escHtml(l.place):""}</div></div>
+      <span class="m-tag ${tg.k}">${tg.label}</span></div>`;}).join("")
+    : `<div class="dash-empty">No leads yet — the sweep is still running, or no public signal matched this subject.</div>`;
+
+  const now=new Date(), ev=[];
+  if(z0) ev.push({t:hhmm(now),x:`Priority zone → <b>${escHtml(z0.place)}</b>`});
+  top.slice(0,3).forEach((l,i)=>{const tm=new Date(now.getTime()-(i+1)*60000); ev.push({t:hhmm(tm),x:`Lead · ${escHtml(l.source_name||"source")}`});});
+  ev.push({t:hhmm(new Date(now.getTime()-6*60000)),x:`Source sweep ${c.done?"complete":"running"}`});
+  $("ovActivity").innerHTML=ev.map(e=>`<div class="mrow"><div class="m-main"><div class="m-t" style="font-weight:500">${e.x}</div></div><span class="m-time">${e.t}</span></div>`).join("");
+  $("ovActC").textContent=ev.length+" events";
+
+  const tiles=[
+    {v:zoneDominance(zones)+"%",k:"Top-zone signal share"},
+    {v:tier(curMax).label,k:"Strongest lead tier"},
+    {v:(c.filtered||0),k:"Filtered as noise"},
+    {v:(c.sources_searched||0).toLocaleString(),k:"Public records scanned"},
+  ];
+  $("ovTiles").innerHTML=tiles.map(t=>`<div class="mtile"><div class="mt-v">${escHtml(String(t.v))}</div><div class="mt-k">${escHtml(t.k)}</div></div>`).join("");
 }
 function buildZones(leads){ const z={};
   leads.forEach(l=>{ const p=l.place||"Unknown"; (z[p]=z[p]||{place:p,count:0,total:0,max:0,lat:0,lng:0}); z[p].count++; z[p].total+=l.match_score; z[p].max=Math.max(z[p].max,l.match_score); z[p].lat+=l.lat||0; z[p].lng+=l.lng||0; });
@@ -1447,7 +1804,8 @@ function renderTimeline(leads,zones){
 }
 function resetOp(){
   clearInterval(poll); window._syncCase=null; lockNav();
-  ["pageMap","pageAnalysis","pageHandoff","pageAsk"].forEach(p=>$(p).classList.add("hidden"));
+  ["pageOverview","pageMap","pageAnalysis","pageCctv","pageHandoff","pageAsk"].forEach(p=>$(p).classList.add("hidden"));
+  const nu=$("navUser"); if(nu) nu.hidden=true;
   intakeMode="case"; showPage("intake");
   // reset the feed filter so a new operation never opens on a stale (e.g. "reviewing") view
   feedFilter="all"; document.querySelectorAll("#filters .fchip").forEach(c=>c.classList.toggle("on",c.dataset.f==="all"));
@@ -1460,14 +1818,17 @@ function resetOp(){
   _authLoaded=false; $("authorities").innerHTML="";
   $("investPanel").classList.add("hidden"); if(areaLayer) areaLayer.clearLayers();
   if(cctvLayer) cctvLayer.clearLayers(); if(ringLayer) ringLayer.clearLayers();
-  $("srPanel").classList.add("hidden"); $("cctvList").innerHTML="";
+  $("srPanel").classList.add("hidden");
+  const cg=$("cctvGrid"); if(cg) cg.innerHTML='<div class="dash-empty">Tap “Find sources” to map nearby places likely to have CCTV.</div>';
+  const cs=$("cctvStats"); if(cs) cs.innerHTML=""; cctvMode("real");
+  const cw=$("camWall"); if(cw){ cw.innerHTML=""; cw.removeAttribute("data-built"); }
   $("graphPanel").classList.add("hidden"); $("pipelinePanel").classList.add("hidden");
   const sp=$("scanPanel"); if(sp){ sp.classList.add("hidden"); sp.classList.remove("fade"); sp.removeAttribute("data-built"); sp.innerHTML=""; }
   // decision-engine: drop the control bar, undo any simulation, end any replay
   _replaying=false; $("dxBar").classList.add("hidden"); $("simModal").classList.add("hidden");
   const ss=$("simShift"); if(ss){ ss.classList.remove("show"); ss.classList.add("hidden"); }
   const rh=$("replayHud"); if(rh) rh.classList.add("hidden");
-  const cb=$("cctvBtn"); if(cb){ cb.disabled=false; cb.textContent="🎥 Find CCTV / footage sources nearby"; }
+  const cb=$("cctvBtn"); if(cb){ cb.disabled=false; cb.textContent="Find sources →"; }
   if(history.replaceState) history.replaceState({}, "", location.pathname);
 }
 
@@ -1630,7 +1991,7 @@ async function loadAuthorities(){ if(_authLoaded||!caseId) return; _authLoaded=t
       +`<div class="auth-note">${escHtml(a.note||"")}</div>`;
   }catch(e){ _authLoaded=false; }
 }
-function openCase(id){ caseId=id; unlockNav(); showPage("map");
+function openCase(id){ caseId=id; unlockNav(); showPage("overview");
   $("sysDot").classList.add("scan"); $("sysState").textContent="Loading"; dispCount=0; _authLoaded=false;
   setExportLinks(); initMap(); setTimeout(()=>map&&map.invalidateSize(),60);
   poll=setInterval(refresh,800); refresh();
@@ -1669,6 +2030,7 @@ async function refresh(){
   renderFeed(c);
   updateMap(c.leads,c.child);
   const zones=buildZones(c.leads); renderZones(zones);
+  renderOverview(c,zones);
   if(!c.intelligence||!(c.intelligence.timeline||[]).length) renderTimeline(c.leads,zones);
 
   // judge moment: priority verdict + map ring once we have signal
