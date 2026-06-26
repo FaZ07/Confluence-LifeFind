@@ -1,6 +1,6 @@
 # LifeFind — the bridge between families searching and the officials who can act
 
-[![CI](https://github.com/FaZ07/LifeFind/actions/workflows/ci.yml/badge.svg)](https://github.com/FaZ07/LifeFind/actions/workflows/ci.yml)
+[![CI](https://github.com/FaZ07/Confluence-LifeFind/actions/workflows/ci.yml/badge.svg)](https://github.com/FaZ07/Confluence-LifeFind/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![No API keys](https://img.shields.io/badge/API_keys-none-success)
 ![Tests](https://img.shields.io/badge/tests-90_passing-success)
@@ -19,7 +19,7 @@
    one form, any city       deterministic fusion · provenance · audit        ranked, sourced case
 ```
 
-**🔗 Live demo:** https://lifeline-alpha-two.vercel.app · **No API keys. No accounts. Runs anywhere, free.**
+**🔗 Live demo:** https://confluence-life-find.vercel.app · **No API keys. No accounts. Runs anywhere, free.**
 
 ---
 
