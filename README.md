@@ -1,5 +1,8 @@
 # LifeFind — Missing Human Search Operations Console
 
+[![CI](https://github.com/FaZ07/LifeFind/actions/workflows/ci.yml/badge.svg)](https://github.com/FaZ07/LifeFind/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Find anyone — before it's too late. Every public source, one live command center.**
 
 > We don't surveil people. Every sighting, news mention and public post already exists —
@@ -19,7 +22,7 @@ Groq LLM ripped out, then hardened into something that actually ships.
 | Persistence | in-memory only | SQLite — cases survive restarts, **shareable by link** |
 | Handoff | — | official channels + CSV / print-to-PDF dossier |
 | API keys | `WIRE_API_KEY` + `GROQ_API_KEY` | **none** |
-| Hardening | — | retries · rate-limit · validation · logging · 31 tests |
+| Hardening | — | retries · rate-limit · validation · logging · 53 tests |
 
 ---
 
@@ -36,7 +39,7 @@ No `.env`, no signup, nothing to configure.
 
 ```bash
 LIFELINE_OFFLINE=1 python -m uvicorn app:app   # force the offline demo set (CI / no-wifi stage)
-pytest -q                                        # 31 tests over the whole engine
+pytest -q                                        # 53 tests over the whole engine
 ```
 
 ---
@@ -133,7 +136,7 @@ hard-fails). All config is env-driven (`settings.py`).
 | `export.py` | CSV + print-to-PDF dossier |
 | `settings.py` | Env-driven configuration |
 | `static/index.html` | Command center UI — no build step |
-| `tests/` | 31 pytest cases |
+| `tests/` | 53 pytest cases (unit + API) |
 
 ### Deploying (Vercel)
 Set `LIFELINE_DB=/tmp/lifefind.db` (serverless filesystems are read-only except `/tmp`).

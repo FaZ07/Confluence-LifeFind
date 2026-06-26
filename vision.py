@@ -18,6 +18,11 @@ import io
 
 from PIL import Image, ImageOps
 
+# Guard against decompression-bomb uploads — images whose declared dimensions are
+# huge but compress tiny, designed to exhaust memory on decode. Pillow raises
+# Image.DecompressionBombError past this cap, which extract_colors turns into a 422.
+Image.MAX_IMAGE_PIXELS = 40_000_000  # ~40 MP
+
 # Representative RGB for common clothing colours (grey absorbs "gray").
 NAMED: dict[str, tuple[int, int, int]] = {
     "red": (200, 30, 30), "maroon": (110, 20, 30), "pink": (240, 140, 170),

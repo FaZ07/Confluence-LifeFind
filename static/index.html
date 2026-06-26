@@ -763,6 +763,7 @@ async function refresh(){
   if(c.done && c.intelligence){ clearInterval(poll); $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete"; $("mapStat").textContent="search complete"; }
   else if(c.done){ $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Analysing…"; $("mapStat").textContent="AI analysing leads…"; }
   else $("mapStat").textContent="aggregating sources…";
+  if(c.error){ clearInterval(poll); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete · partial"; $("mapStat").textContent="⚠ "+c.error; }
 
   if(c.intelligence){ renderIntelligence(c.intelligence); renderInvestigation(c.intelligence); }
   if(c.done) loadAuthorities();

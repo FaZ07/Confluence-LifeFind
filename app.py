@@ -101,51 +101,64 @@ def _get_case(case_id: str) -> dict | None:
 
 
 async def run_search(case_id: str) -> None:
-    """Background task: geocode, fan out across channels, score, persist."""
+    """Background task: geocode, fan out across channels, score, persist.
+    Wrapped end-to-end so any failure still drives the case to a terminal state
+    with a valid (possibly empty) intelligence payload — a case can never wedge."""
     case = CASES[case_id]
     child = case["child"]
     started = time.perf_counter()
+    gaz: dict = {"center": None, "city": "", "city_coord": None, "places": {}}
 
-    # Global geocoding: resolve the case location (any city on earth) + a gazetteer.
-    gaz = await geo.build_gazetteer(child.get("last_seen_location", ""))
-    center = gaz.get("center")
-    if center:
-        child["lat"], child["lng"], child["place"] = center
-    case["geocoded"] = center is not None
-    store.save(case)
-
-    async def run_channel(channel):
-        scanned, raw = await sources.fetch_channel(channel, child)
-        return channel, scanned, raw
-
-    tasks = [asyncio.ensure_future(run_channel(ch)) for ch in sources.CHANNELS]
-    for coro in asyncio.as_completed(tasks):
-        channel, scanned, raw = await coro
-        case["sources_searched"] += scanned
-        accepted = 0
-        for item in raw:
-            geo.locate_lead(item, gaz, center)        # plot it (global)
-            lead = score_lead(item, case, channel["weight"])
-            if any(l["url"] == lead["url"] for l in case["leads"]):
-                continue
-            case["leads"].append(lead)
-            case["leads"] = dedup(case["leads"])
-            accepted += 1
-            await asyncio.sleep(0.18)                  # stream effect
-        case["diagnostics"].append(
-            {"channel": channel["label"], "query": sources.build_query(channel, child),
-             "status": "done", "leads": accepted})
+    try:
+        # Global geocoding: resolve the case location (any city on earth) + gazetteer.
+        gaz = await geo.build_gazetteer(child.get("last_seen_location", ""))
+        center = gaz.get("center")
+        if center:
+            child["lat"], child["lng"], child["place"] = center
+        case["geocoded"] = center is not None
         store.save(case)
 
-    case["elapsed_s"] = round(time.perf_counter() - started, 1)
-    case["done"] = True
+        async def run_channel(channel):
+            scanned, raw = await sources.fetch_channel(channel, child)
+            return channel, scanned, raw
 
-    # Deterministic intelligence — only the case's resolved CITY is treated as
-    # city-level (so the specific last-seen spot still fuses normally).
-    generics = {gaz["city"]} if gaz.get("city") else set()
-    case["intelligence"] = intel.analyze_case(case["leads"], case["child"], generics)
-    store.save(case)
-    log.info("case %s complete: %d leads, %.1fs", case_id, len(case["leads"]), case["elapsed_s"])
+        tasks = [asyncio.ensure_future(run_channel(ch)) for ch in sources.CHANNELS]
+        for coro in asyncio.as_completed(tasks):
+            channel, scanned, raw = await coro
+            case["sources_searched"] += scanned
+            accepted = 0
+            for item in raw:
+                geo.locate_lead(item, gaz, center)        # plot it (global)
+                lead = score_lead(item, case, channel["weight"])
+                if any(l["url"] == lead["url"] for l in case["leads"]):
+                    continue
+                case["leads"].append(lead)
+                case["leads"] = dedup(case["leads"])
+                accepted += 1
+                await asyncio.sleep(0.18)                  # stream effect
+            case["diagnostics"].append(
+                {"channel": channel["label"], "query": sources.build_query(channel, child),
+                 "status": "done", "leads": accepted})
+            store.save(case)
+
+        # Only the resolved CITY is treated as city-level (specific spot still fuses).
+        generics = {gaz["city"]} if gaz.get("city") else set()
+        case["intelligence"] = intel.analyze_case(case["leads"], case["child"], generics)
+    except Exception as e:  # noqa: BLE001 — never leave a case wedged
+        log.exception("run_search failed for %s", case_id)
+        case["error"] = f"partial results — {type(e).__name__}"
+    finally:
+        case["elapsed_s"] = round(time.perf_counter() - started, 1)
+        case["done"] = True
+        if case.get("intelligence") is None:   # guarantee a terminal, valid payload
+            generics = {gaz["city"]} if gaz.get("city") else set()
+            try:
+                case["intelligence"] = intel.analyze_case(case["leads"], case["child"], generics)
+            except Exception:  # noqa: BLE001
+                case["intelligence"] = intel.analyze_case([], case["child"])
+        store.save(case)
+        log.info("case %s done: %d leads, %.1fs%s", case_id, len(case["leads"]),
+                 case["elapsed_s"], " (with errors)" if case.get("error") else "")
 
 
 @app.post("/api/search")
@@ -162,7 +175,7 @@ async def start_search(child: ChildIn, request: Request):
     CASES[case_id] = {
         "id": case_id, "child": child.model_dump(), "leads": [],
         "sources_searched": 0, "elapsed_s": 0.0, "done": False,
-        "geocoded": False, "diagnostics": [], "intelligence": None,
+        "geocoded": False, "diagnostics": [], "intelligence": None, "error": None,
     }
     asyncio.create_task(run_search(case_id))
     return {"case_id": case_id}
