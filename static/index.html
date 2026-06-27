@@ -1414,6 +1414,7 @@
               <button class="oa-btn" id="familyBtn" onclick="shareFamily()" title="Copy a calm, read-only status link for the family — status and checked areas only, no raw-lead firehose.">👪 Share calm family view</button>
               <a class="oa-btn" id="csvLink" href="#" download title="Download the ranked leads as a CSV spreadsheet.">⬇ Leads as CSV</a>
               <a class="oa-btn" id="reportLink" href="#" target="_blank" rel="noopener" title="Open a printable, sourced case report to hand to a coordinator or the police.">🖨 Printable case report</a>
+              <a class="oa-btn" id="sightingLink" href="#" target="_blank" rel="noopener" title="Open the public sighting form — share this link or scan the QR code to collect crowd sightings.">👁 Report a sighting (public form)</a>
             </div>
           </div>
           <div class="panel handoff-panel" id="crowdPanel" style="display:none">
@@ -2139,7 +2140,6 @@ function icard(l){
         <button class="lb-e ${l.status==='escalated'?'on':''}" onclick="moveLead('${l.id}','escalated')" title="Escalate — flags its location amber for urgent attention and logs the decision.">⚑ Escalate</button>
         <button class="lb-d ${l.status==='dismissed'?'on':''}" onclick="moveLead('${l.id}','dismissed')" title="Dismiss this lead — logs the decision.">✕ Dismiss</button>
         <a href="${l.url}" target="_blank" rel="noopener">open ↗</a>
-        ${caseId&&!l.is_sighting?`<a href="/sighting?case=${caseId}" target="_blank" rel="noopener" style="color:var(--primary)">👁 sighting</a>`:""}
       </span>
     </div></div>`;
 }
@@ -2539,7 +2539,7 @@ function renderPlan(p){
 // ---- shareable case + export + official channels ----
 let _authLoaded=false;
 function setExportLinks(){ if(!caseId) return;
-  const cs=$("csvLink"), ds=$("reportLink");
+  const cs=$("csvLink"), ds=$("reportLink"), sl=$("sightingLink");
   if(SV){
     if(cs){ cs.removeAttribute("href"); cs.onclick=(e)=>{ e.preventDefault(); downloadCSV(); }; }
     if(ds){ ds.removeAttribute("href"); ds.onclick=(e)=>{ e.preventDefault(); openReport(); }; }
@@ -2547,6 +2547,7 @@ function setExportLinks(){ if(!caseId) return;
     if(cs){ cs.onclick=null; cs.href=`/api/case/${caseId}/export.csv`; }
     if(ds){ ds.onclick=null; ds.href=`/api/case/${caseId}/report`; }
   }
+  if(sl){ sl.href=`/sighting?case=${caseId}`; }
 }
 // neutralise spreadsheet formula injection (= + - @) in the exported CSV — mirrors export._csv_safe
 function csvSafe(x){ const s=(x==null?"":String(x)); return /^[=+\-@\t\r]/.test(s)?"'"+s:s; }
@@ -2611,6 +2612,30 @@ function openCase(id){ caseId=id; unlockNav(); showPage("overview");
   poll=setInterval(refresh,800); refresh();
 }
 
+async function pollSightings(){
+  if(!caseId) return;
+  try {
+    const r=await fetch(`/api/case/${caseId}`);
+    if(!r.ok) return; // different serverless instance — keep existing display untouched
+    const fresh=await r.json();
+    const newCount=(fresh.sightings||[]).length;
+    const oldCount=(window._lastCase?.sightings||[]).length;
+    if(newCount<=oldCount) return;
+    const existing=new Set((window._lastCase?.leads||[]).map(l=>l.id));
+    const newLeads=(fresh.leads||[]).filter(l=>l.is_sighting&&!existing.has(l.id));
+    if(!newLeads.length) return;
+    if(window._syncCase){ window._syncCase.leads.push(...newLeads); window._syncCase.sightings=fresh.sightings; }
+    if(window._lastCase){
+      window._lastCase.leads.push(...newLeads);
+      window._lastCase.sightings=fresh.sightings;
+      renderSightingsFeed(window._lastCase.leads);
+      renderFeed(window._lastCase);
+      updateCrowdPanel(window._lastCase);
+      $("tbLeads").textContent=window._lastCase.leads.length;
+    }
+  } catch(e){}
+}
+
 async function refresh(){
   let c;
   if(window._syncCase){ c=window._syncCase; }
@@ -2629,7 +2654,7 @@ async function refresh(){
   dispCount=Math.min(target,dispCount+step);
   $("tbSources").textContent=dispCount.toLocaleString(); $("tbLeads").textContent=c.leads.length;
   $("tbElapsed").textContent=(c.done?c.elapsed_s:(c.sources_searched/700).toFixed(1))+"s";
-  if(c.done && c.intelligence){ clearInterval(poll); window._syncCase=null; poll=setInterval(refresh,9000); $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete"; $("mapStat").textContent="search complete"; }
+  if(c.done && c.intelligence){ clearInterval(poll); poll=setInterval(pollSightings,9000); $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete"; $("mapStat").textContent="search complete"; }
   else if(c.done){ $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Analysing…"; $("mapStat").textContent="AI analysing leads…"; }
   else $("mapStat").textContent="aggregating sources…";
   if(c.error){ clearInterval(poll); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete · partial"; $("mapStat").textContent="⚠ "+c.error; }
