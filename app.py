@@ -38,7 +38,7 @@ import settings
 import sources
 import store
 import vision
-from scoring import dedup, score_lead
+from scoring import dedup, score_lead, score_sighting
 
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
@@ -471,9 +471,13 @@ async def submit_sighting(case_id: str, request: Request):
         raise HTTPException(404, "case not found or expired")
 
     body = await request.json()
-    location  = str(body.get("location")    or "")[:200]
-    description = str(body.get("description") or "")[:500]
-    contact   = str(body.get("contact")     or "anonymous")[:100]
+    location          = str(body.get("location")          or "")[:200]
+    description       = str(body.get("description")       or "")[:500]
+    contact           = str(body.get("contact")           or "anonymous")[:100]
+    clothing_observed = str(body.get("clothing_observed") or "")[:200]
+    sighter_type      = str(body.get("sighter_type")      or "anonymous")[:50]
+    seen_at           = str(body.get("seen_at")           or "")[:20]
+    direction         = str(body.get("direction")         or "")[:50]
     lat = body.get("lat")
     lng = body.get("lng")
 
@@ -485,46 +489,65 @@ async def submit_sighting(case_id: str, request: Request):
     child    = case.get("child", {})
     name     = child.get("name") or "the missing person"
 
-    raw: dict = {
-        "title":       f"Public sighting near {location or 'reported location'}",
-        "snippet":     description or f"A sighting of {name} was reported near {location}.",
-        "url":         f"https://confluence-life-find.vercel.app/case/{case_id}#s-{sight_id}",
-        "date":        today,
-        "source_type": "sighting",
-        "source_name": "👁 Public Sighting",
-        "sighting_id": sight_id,
+    # Build the sighting dict for the adaptive scorer
+    sighting_data: dict = {
+        "id":               sight_id,
+        "description":      description or f"A sighting of {name} was reported near {location}.",
+        "location":         location,
+        "clothing_observed": clothing_observed,
+        "sighter_type":     sighter_type,
+        "seen_at":          seen_at,
+        "direction":        direction,
+        "submitted_at":     datetime.utcnow().isoformat(),
+        "contact":          contact,
     }
     if lat is not None and lng is not None:
-        raw["lat"] = float(lat)
-        raw["lng"] = float(lng)
-
-    # Geolocate against the case's existing gazetteer (no re-geocoding needed)
-    gaz: dict = {"center": None, "city": "", "city_coord": None, "places": {}}
-    if child.get("lat") and child.get("lng"):
-        center = (float(child["lat"]), float(child["lng"]), child.get("place", ""))
-        gaz["center"] = center
-        gaz["city_coord"] = center
-    geo.locate_lead(raw, gaz, gaz.get("center"))
-
-    lead = score_lead(raw, case, source_weight=0.95)
-    lead["id"] = sight_id
-    lead["is_sighting"] = True
-    lead["on_topic"] = True   # every public sighting is relevant by definition
+        sighting_data["lat"] = float(lat)
+        sighting_data["lng"] = float(lng)
 
     # Ensure case is in-memory
     if case_id not in CASES:
         CASES[case_id] = case
 
+    # Adaptive fusion scoring (RAG-style description match + 6 other components)
+    existing_leads = CASES[case_id].get("leads", [])
+    fusion = score_sighting(sighting_data, case, existing_leads)
+
+    # Build the lead record
+    direction_note = f" Heading {direction}." if direction else ""
+    cloth_note     = f" Clothing observed: {clothing_observed}." if clothing_observed else ""
+    lead: dict = {
+        "id":                sight_id,
+        "source_type":       "sighting",
+        "source_name":       "👁 Public Sighting",
+        "url":               f"https://confluence-life-find.vercel.app/case/{case_id}#s-{sight_id}",
+        "title":             f"Public sighting near {location or 'reported location'}",
+        "snippet":           (description or f"A sighting of {name} was reported near {location}.")
+                             + cloth_note + direction_note,
+        "date":              seen_at[:10] if seen_at else today,
+        "lat":               sighting_data.get("lat"),
+        "lng":               sighting_data.get("lng"),
+        "place":             location,
+        "hl_name":           [],
+        "hl_loc":            [],
+        "hl_cloth":          [],
+        "highlight":         [],
+        "matched_attributes": [],
+        "status":            "new",
+        # Adaptive fusion score fields
+        **fusion,
+    }
+
+    # Geolocate against the case's gazetteer
+    gaz: dict = {"center": None, "city": "", "city_coord": None, "places": {}}
+    if child.get("lat") and child.get("lng"):
+        center = (float(child["lat"]), float(child["lng"]), child.get("place", ""))
+        gaz["center"] = center
+        gaz["city_coord"] = center
+    geo.locate_lead(lead, gaz, gaz.get("center"))
+
     CASES[case_id]["leads"].append(lead)
-    CASES[case_id].setdefault("sightings", []).append({
-        "id": sight_id,
-        "submitted_at": datetime.utcnow().isoformat(),
-        "location": location,
-        "lat": lat,
-        "lng": lng,
-        "description": description,
-        "contact": contact,
-    })
+    CASES[case_id].setdefault("sightings", []).append(sighting_data)
 
     # Re-run intelligence so zones / graph update in real time
     try:
@@ -537,10 +560,12 @@ async def submit_sighting(case_id: str, request: Request):
     store.save(CASES[case_id])
 
     return {
-        "ok": True,
+        "ok":          True,
         "sighting_id": sight_id,
-        "score": lead.get("match_score", 0),
-        "message": "Thank you — your sighting has been added to the case.",
+        "score":       fusion["match_score"],
+        "breakdown":   fusion["breakdown"],
+        "components":  fusion.get("components_used", []),
+        "message":     "Thank you — your sighting has been added to the case.",
     }
 
 
