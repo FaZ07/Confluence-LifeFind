@@ -1394,16 +1394,7 @@
 
       <!-- ============ HANDOFF ============ -->
       <section id="pageHandoff" class="page hidden">
-        <div class="handoff-intro">
-          <div class="hi-k">▣ Hand the case to the officials who can act</div>
-          <p>This is where the bridge completes: the family's case — ranked, corroborated and sourced — goes to the <b>authorities</b>. Every official channel below is one click from filing or escalating; in an emergency call your local emergency number.</p>
-        </div>
-        <div class="handoff-grid">
-          <div class="panel handoff-panel">
-            <div class="p-h"><span class="t">Official channels</span></div>
-            <div class="authorities" id="authorities"></div>
-            <button class="oa-btn" style="margin:12px 13px 14px" onclick="showPage('cctv')" title="Open the CCTV Analysis page to find nearby footage sources to request.">🎥 Find CCTV / footage sources →</button>
-          </div>
+        <div class="handoff-grid" style="grid-template-columns:1fr">
           <div class="panel handoff-panel">
             <div class="p-h"><span class="t">Share &amp; export</span></div>
             <div class="ops-actions">
@@ -1412,9 +1403,8 @@
               <a class="oa-btn" id="csvLink" href="#" download title="Download the ranked leads as a CSV spreadsheet.">⬇ Leads as CSV</a>
               <a class="oa-btn" id="reportLink" href="#" target="_blank" rel="noopener" title="Open a printable, sourced case report to hand to a coordinator or the police.">🖨 Printable case report</a>
             </div>
-            <p class="oa-note">The operational link lets police or a search team watch the full leads as they arrive. The family view is a calmer, read-only status page — no raw-lead firehose. The CSV and printable report give a ranked, sourced summary to act on.</p>
           </div>
-          <div class="panel handoff-panel" id="crowdPanel" style="display:none;grid-column:1/-1">
+          <div class="panel handoff-panel" id="crowdPanel" style="display:none">
             <div class="p-h"><span class="t">👁 Crowd sightings</span><span class="c" id="sightingCount">0 submitted</span></div>
             <div style="display:flex;gap:20px;align-items:flex-start;padding:4px 14px 16px;flex-wrap:wrap">
               <div style="flex-shrink:0;text-align:center">
