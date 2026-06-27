@@ -75,8 +75,51 @@ _LOCALES = {
     "SG": ("en-SG", "SG", "SG:en"), "ZA": ("en-ZA", "ZA", "ZA:en"),
 }
 _LOCALE_KEYWORDS = {
-    "IN": ["india", "chennai", "tamil", "kerala", "mumbai", "delhi", "bengaluru",
-           "bangalore", "hyderabad", "kolkata", "pune", "pondicherry", "puducherry"],
+    "IN": [
+        "india", "indian",
+        # Tamil Nadu
+        "chennai", "tamil", "coimbatore", "madurai", "tiruchirappalli", "trichy",
+        "tiruppur", "salem", "erode", "vellore", "pondicherry", "puducherry",
+        # Kerala
+        "kerala", "kochi", "thiruvananthapuram", "trivandrum", "kozhikode", "calicut",
+        "thrissur", "kollam", "kannur",
+        # Karnataka
+        "bengaluru", "bangalore", "mysuru", "mysore", "mangaluru", "mangalore",
+        "hubli", "dharwad", "belgaum",
+        # Andhra / Telangana
+        "hyderabad", "secunderabad", "visakhapatnam", "vizag", "vijayawada",
+        "warangal", "tirupati", "guntur", "nellore",
+        # Maharashtra
+        "mumbai", "pune", "nagpur", "nashik", "aurangabad", "solapur", "thane",
+        "navi mumbai",
+        # Gujarat
+        "ahmedabad", "surat", "vadodara", "baroda", "rajkot", "gandhinagar",
+        "bhavnagar",
+        # Rajasthan
+        "jaipur", "jodhpur", "udaipur", "kota", "ajmer", "bikaner", "alwar",
+        # Uttar Pradesh
+        "lucknow", "kanpur", "agra", "varanasi", "allahabad", "prayagraj",
+        "meerut", "ghaziabad", "noida", "mathura", "aligarh", "gorakhpur",
+        "bareilly", "moradabad",
+        # Delhi NCR
+        "delhi", "new delhi", "faridabad", "gurugram", "gurgaon",
+        # Punjab / Haryana / Himachal
+        "chandigarh", "amritsar", "ludhiana", "jalandhar", "patiala",
+        "ambala", "shimla", "dharamsala",
+        # Madhya Pradesh / Chhattisgarh
+        "bhopal", "indore", "jabalpur", "gwalior", "ujjain", "raipur",
+        # Bihar / Jharkhand
+        "patna", "ranchi", "jamshedpur", "dhanbad", "gaya",
+        # West Bengal
+        "kolkata", "calcutta", "howrah", "durgapur", "asansol", "siliguri",
+        # Odisha / North East
+        "bhubaneswar", "cuttack", "guwahati", "dispur", "imphal", "shillong",
+        "agartala",
+        # Jammu & Kashmir
+        "srinagar", "jammu",
+        # Goa
+        "panaji", "goa",
+    ],
     "US": ["usa", "united states", " u.s", "america", "new york", "california",
            "texas", "florida", "chicago", "los angeles", "boston", "seattle"],
     "GB": ["uk", "united kingdom", "england", "london", "scotland", "wales", "manchester"],
@@ -349,7 +392,10 @@ def _templated_leads(channel_key: str, child: dict) -> list[dict]:
 async def _fetch_offline(channel: dict, child: dict) -> tuple[int, list[dict]]:
     await asyncio.sleep(0.35)
     category = child.get("category", "child")
-    curated = _CURATED.get(category)
+    city = (child.get("last_seen_location", "").split(",")[0] or "").strip().lower()
+    # Only use Chennai-curated data when the case is actually in Chennai
+    use_curated = "chennai" in city
+    curated = _CURATED.get(category) if use_curated else None
     results = list(curated.get(channel["key"], [])) if curated else _templated_leads(channel["key"], child)
     results = [dict(r) for r in results]
     for r in results:   # every 'open' must land on real coverage, never a dead URL

@@ -33,10 +33,9 @@ def _f(name: str, default: float) -> float:
 
 # --- modes -------------------------------------------------------------
 ON_VERCEL = bool(os.getenv("VERCEL"))              # serverless: synchronous + no disk
-# OFFLINE is the DEFAULT data source (bundled demo data). On Vercel it defaults on,
-# but it is overridable PER REQUEST via the Live/Demo toggle (see offline_now() below),
-# so the live site can run real sources without an env change or redeploy.
-OFFLINE = _b("LIFELINE_OFFLINE", ON_VERCEL)
+# OFFLINE defaults False everywhere — Live mode is the default. The Demo/Live toggle
+# in the UI overrides per-request. Set LIFELINE_OFFLINE=1 to force demo-only.
+OFFLINE = _b("LIFELINE_OFFLINE", False)
 SYNC = _b("LIFELINE_SYNC", False) or ON_VERCEL     # serverless MUST run inline (a bg task can't survive)
 LOG_LEVEL = os.getenv("LIFELINE_LOG_LEVEL", "INFO").upper()
 
