@@ -2139,6 +2139,7 @@ function icard(l){
         <button class="lb-e ${l.status==='escalated'?'on':''}" onclick="moveLead('${l.id}','escalated')" title="Escalate — flags its location amber for urgent attention and logs the decision.">⚑ Escalate</button>
         <button class="lb-d ${l.status==='dismissed'?'on':''}" onclick="moveLead('${l.id}','dismissed')" title="Dismiss this lead — logs the decision.">✕ Dismiss</button>
         <a href="${l.url}" target="_blank" rel="noopener">open ↗</a>
+        ${caseId&&!l.is_sighting?`<a href="/sighting?case=${caseId}" target="_blank" rel="noopener" style="color:var(--primary)">👁 sighting</a>`:""}
       </span>
     </div></div>`;
 }
@@ -2628,7 +2629,7 @@ async function refresh(){
   dispCount=Math.min(target,dispCount+step);
   $("tbSources").textContent=dispCount.toLocaleString(); $("tbLeads").textContent=c.leads.length;
   $("tbElapsed").textContent=(c.done?c.elapsed_s:(c.sources_searched/700).toFixed(1))+"s";
-  if(c.done && c.intelligence){ clearInterval(poll); $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete"; $("mapStat").textContent="search complete"; }
+  if(c.done && c.intelligence){ clearInterval(poll); window._syncCase=null; poll=setInterval(refresh,9000); $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete"; $("mapStat").textContent="search complete"; }
   else if(c.done){ $("tbSources").textContent=target.toLocaleString(); $("sysDot").classList.remove("scan"); $("sysState").textContent="Analysing…"; $("mapStat").textContent="AI analysing leads…"; }
   else $("mapStat").textContent="aggregating sources…";
   if(c.error){ clearInterval(poll); $("sysDot").classList.remove("scan"); $("sysState").textContent="Complete · partial"; $("mapStat").textContent="⚠ "+c.error; }
