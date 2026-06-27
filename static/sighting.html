@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report a Sighting — LifeFind</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--accent:#ff6b35;--ink:#111;--muted:#666;--bg:#f4f4f6;--card:#fff;--border:#e0e0e0;--radius:12px}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);min-height:100vh;padding:0 0 40px}
+  .top-bar{background:var(--accent);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px}
+  .top-bar .logo{font-weight:800;font-size:1.1rem;letter-spacing:.5px}
+  .top-bar .sub{font-size:.82rem;opacity:.85}
+  .container{max-width:480px;margin:0 auto;padding:20px 16px}
+  .missing-card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:20px;border-left:4px solid var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.07)}
+  .missing-card .label{font-size:.72rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .missing-card .name{font-size:1.4rem;font-weight:800;color:var(--ink)}
+  .missing-card .detail{font-size:.88rem;color:var(--muted);margin-top:6px;line-height:1.5}
+  .missing-card .detail span{color:var(--ink);font-weight:600}
+  .form-card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+  .form-title{font-size:1.05rem;font-weight:700;margin-bottom:16px;color:var(--ink)}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:.83rem;font-weight:600;color:var(--ink);margin-bottom:6px}
+  .field input,.field textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:11px 13px;font-size:.95rem;color:var(--ink);background:#fff;outline:none;transition:border-color .15s}
+  .field input:focus,.field textarea:focus{border-color:var(--accent)}
+  .field textarea{resize:vertical;min-height:90px;font-family:inherit}
+  .autocomplete-wrap{position:relative}
+  .suggestions{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:8px;z-index:99;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+  .suggestions .item{padding:11px 13px;font-size:.9rem;cursor:pointer;border-bottom:1px solid #f0f0f0}
+  .suggestions .item:last-child{border-bottom:none}
+  .suggestions .item:hover{background:#f9f9f9}
+  .submit-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:14px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .15s;margin-top:4px}
+  .submit-btn:hover{opacity:.9}
+  .submit-btn:disabled{opacity:.5;cursor:default}
+  .success{display:none;text-align:center;padding:32px 20px}
+  .success .icon{font-size:3rem;margin-bottom:12px}
+  .success .title{font-size:1.3rem;font-weight:800;color:#16a34a;margin-bottom:8px}
+  .success .msg{color:var(--muted);font-size:.95rem;line-height:1.6}
+  .error-msg{color:#dc2626;font-size:.83rem;margin-top:6px;display:none}
+  .loading{opacity:.6;pointer-events:none}
+  .note{font-size:.78rem;color:var(--muted);margin-top:8px;line-height:1.4}
+  .not-found{text-align:center;padding:40px 20px;color:var(--muted)}
+  .not-found .icon{font-size:2.5rem;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <div class="logo">◈ LifeFind</div>
+    <div class="sub">Report a sighting — help bring them home</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Missing person card -->
+  <div class="missing-card" id="missingCard" style="display:none">
+    <div class="label">⚠ Missing person</div>
+    <div class="name" id="mcName">—</div>
+    <div class="detail" id="mcDetail"></div>
+  </div>
+
+  <div id="notFound" class="not-found" style="display:none">
+    <div class="icon">❓</div>
+    <div>Case not found or expired.</div>
+  </div>
+
+  <!-- Sighting form -->
+  <div class="form-card" id="formCard" style="display:none">
+    <div class="form-title">👁 Report what you saw</div>
+
+    <div class="field">
+      <label for="loc">Where did you see them? *</label>
+      <div class="autocomplete-wrap">
+        <input id="loc" type="text" placeholder="Type a place, landmark or address…" autocomplete="off">
+        <div class="suggestions" id="suggestions" style="display:none"></div>
+      </div>
+      <div class="error-msg" id="locErr">Please enter a location.</div>
+    </div>
+
+    <div class="field">
+      <label for="desc">What did you see? *</label>
+      <textarea id="desc" placeholder="Describe what you saw — clothing, direction they were heading, who they were with…"></textarea>
+      <div class="error-msg" id="descErr">Please describe what you saw.</div>
+    </div>
+
+    <div class="field">
+      <label for="contact">Your contact (optional)</label>
+      <input id="contact" type="text" placeholder="Phone number or email — authorities may follow up">
+      <div class="note">Leave blank to submit anonymously. Your contact is only shared with the official search team.</div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitSighting()">Submit sighting →</button>
+  </div>
+
+  <!-- Success state -->
+  <div class="form-card success" id="successCard">
+    <div class="icon">✅</div>
+    <div class="title">Sighting reported</div>
+    <div class="msg">
+      Thank you. Your report has been added to the live case and the search team has been notified.<br><br>
+      Every sighting counts — you may have just made the difference.
+    </div>
+  </div>
+
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const caseId = params.get('case');
+let caseLat = null, caseLng = null;
+let pickedLat = null, pickedLng = null;
+
+async function loadCase() {
+  if (!caseId) { document.getElementById('notFound').style.display=''; return; }
+  try {
+    const r = await fetch(`/api/case/${caseId}`);
+    if (!r.ok) { document.getElementById('notFound').style.display=''; return; }
+    const data = await r.json();
+    const child = data.child || {};
+    caseLat = child.lat; caseLng = child.lng;
+
+    document.getElementById('mcName').textContent = child.name || 'Unknown';
+    const parts = [];
+    if (child.age) parts.push(`Age <span>${child.age}</span>`);
+    if (child.last_seen_location) parts.push(`Last seen near <span>${child.last_seen_location}</span>`);
+    if (child.clothing) parts.push(`Wearing <span>${child.clothing}</span>`);
+    document.getElementById('mcDetail').innerHTML = parts.join(' · ');
+    document.getElementById('missingCard').style.display = '';
+    document.getElementById('formCard').style.display = '';
+
+    const accent = {child:'#ff6b35',dementia:'#62e8ff',disaster:'#6aa8ff',tourist:'#46e0a0',missing:'#bb8bff'}[child.category] || '#ff6b35';
+    document.documentElement.style.setProperty('--accent', accent);
+    document.querySelector('.missing-card').style.borderLeftColor = accent;
+  } catch(e) {
+    document.getElementById('notFound').style.display='';
+  }
+}
+
+// City autocomplete reusing the same geocode API
+let acTimer = null;
+document.getElementById('loc').addEventListener('input', function() {
+  clearTimeout(acTimer);
+  const q = this.value.trim();
+  if (q.length < 2) { hideSuggestions(); return; }
+  acTimer = setTimeout(() => fetchSuggestions(q), 280);
+});
+document.getElementById('loc').addEventListener('blur', () => setTimeout(hideSuggestions, 200));
+
+async function fetchSuggestions(q) {
+  try {
+    const r = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+    if (!r.ok) return;
+    const items = await r.json();
+    showSuggestions(items);
+  } catch(e) {}
+}
+
+function showSuggestions(items) {
+  const box = document.getElementById('suggestions');
+  if (!items.length) { hideSuggestions(); return; }
+  box.innerHTML = items.slice(0,6).map(it =>
+    `<div class="item" onmousedown="pickSuggestion('${esc(it.display_name)}',${it.lat},${it.lng})">${it.display_name}</div>`
+  ).join('');
+  box.style.display = '';
+}
+
+function hideSuggestions() { document.getElementById('suggestions').style.display='none'; }
+function esc(s){ return s.replace(/'/g,"\\'"); }
+
+function pickSuggestion(name, lat, lng) {
+  document.getElementById('loc').value = name;
+  pickedLat = lat; pickedLng = lng;
+  hideSuggestions();
+}
+
+async function submitSighting() {
+  const loc  = document.getElementById('loc').value.trim();
+  const desc = document.getElementById('desc').value.trim();
+  const contact = document.getElementById('contact').value.trim();
+
+  let ok = true;
+  document.getElementById('locErr').style.display  = loc  ? 'none' : '';
+  document.getElementById('descErr').style.display = desc ? 'none' : '';
+  if (!loc)  ok = false;
+  if (!desc) ok = false;
+  if (!ok)   return;
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    const body = { location: loc, description: desc, contact: contact || 'anonymous' };
+    if (pickedLat != null) { body.lat = pickedLat; body.lng = pickedLng; }
+    const r = await fetch(`/api/case/${caseId}/sighting`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    document.getElementById('formCard').style.display   = 'none';
+    document.getElementById('missingCard').style.display = 'none';
+    document.getElementById('successCard').style.display = '';
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Submit sighting →';
+    alert('Something went wrong — please try again.');
+  }
+}
+
+loadCase();
+</script>
+</body>
+</html>

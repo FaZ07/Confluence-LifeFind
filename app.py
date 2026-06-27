@@ -240,6 +240,7 @@ async def start_search(child: ChildIn, request: Request):
         "sources_searched": 0, "elapsed_s": 0.0, "done": False,
         "geocoded": False, "diagnostics": [], "intelligence": None, "error": None,
         "search_model": None, "cctv": None, "filtered": 0, "search_plan": None,
+        "sightings": [],
     }
     _evict_old_cases()
     offline = settings.OFFLINE if child.live is None else (not child.live)
@@ -460,6 +461,173 @@ async def cctv_stateless(lat: float, lng: float):
     return {"places": await places.nearby(lat, lng),
             "note": "Public places that commonly run CCTV near the point. Verify on the "
                     "ground and request any footage through the proper channel."}
+
+
+@app.post("/api/case/{case_id}/sighting")
+async def submit_sighting(case_id: str, request: Request):
+    """Public crowd-sourced sighting — no auth, anyone with the link can submit."""
+    case = _get_case(case_id)
+    if not case:
+        raise HTTPException(404, "case not found or expired")
+
+    body = await request.json()
+    location  = str(body.get("location")    or "")[:200]
+    description = str(body.get("description") or "")[:500]
+    contact   = str(body.get("contact")     or "anonymous")[:100]
+    lat = body.get("lat")
+    lng = body.get("lng")
+
+    if not location and not description:
+        raise HTTPException(422, "provide at least a location or description")
+
+    sight_id = secrets.token_urlsafe(8)
+    today    = datetime.utcnow().strftime("%Y-%m-%d")
+    child    = case.get("child", {})
+    name     = child.get("name") or "the missing person"
+
+    raw: dict = {
+        "title":       f"Public sighting near {location or 'reported location'}",
+        "snippet":     description or f"A sighting of {name} was reported near {location}.",
+        "url":         f"https://confluence-life-find.vercel.app/case/{case_id}#s-{sight_id}",
+        "date":        today,
+        "source_type": "sighting",
+        "source_name": "👁 Public Sighting",
+        "sighting_id": sight_id,
+    }
+    if lat is not None and lng is not None:
+        raw["lat"] = float(lat)
+        raw["lng"] = float(lng)
+
+    # Geolocate against the case's existing gazetteer (no re-geocoding needed)
+    gaz: dict = {"center": None, "city": "", "city_coord": None, "places": {}}
+    if child.get("lat") and child.get("lng"):
+        center = (float(child["lat"]), float(child["lng"]), child.get("place", ""))
+        gaz["center"] = center
+        gaz["city_coord"] = center
+    geo.locate_lead(raw, gaz, gaz.get("center"))
+
+    lead = score_lead(raw, case, source_weight=0.95)
+    lead["id"] = sight_id
+    lead["is_sighting"] = True
+    lead["on_topic"] = True   # every public sighting is relevant by definition
+
+    # Ensure case is in-memory
+    if case_id not in CASES:
+        CASES[case_id] = case
+
+    CASES[case_id]["leads"].append(lead)
+    CASES[case_id].setdefault("sightings", []).append({
+        "id": sight_id,
+        "submitted_at": datetime.utcnow().isoformat(),
+        "location": location,
+        "lat": lat,
+        "lng": lng,
+        "description": description,
+        "contact": contact,
+    })
+
+    # Re-run intelligence so zones / graph update in real time
+    try:
+        generics: set = set()
+        CASES[case_id]["intelligence"] = intel.analyze_case(
+            CASES[case_id]["leads"], child, generics)
+        CASES[case_id]["graph"] = graph.build_graph(CASES[case_id])
+    except Exception:  # noqa: BLE001
+        pass
+    store.save(CASES[case_id])
+
+    return {
+        "ok": True,
+        "sighting_id": sight_id,
+        "score": lead.get("match_score", 0),
+        "message": "Thank you — your sighting has been added to the case.",
+    }
+
+
+@app.get("/case/{case_id}/poster")
+async def case_poster(case_id: str):
+    """MISSING person poster — shareable HTML page with QR code for crowd sightings."""
+    case = _get_case(case_id)
+    if not case:
+        raise HTTPException(404, "case not found")
+
+    child    = case.get("child", {})
+    name     = child.get("name") or "Unknown"
+    age      = child.get("age") or ""
+    location = child.get("last_seen_location") or ""
+    last_time= child.get("last_seen_time") or ""
+    clothing = child.get("clothing") or ""
+    features = child.get("distinguishing_features") or ""
+    cat      = child.get("category", "missing")
+    contact  = settings.CONTACT_EMAIL
+
+    accent = {"child":"#ff6b35","dementia":"#62e8ff","disaster":"#6aa8ff",
+              "tourist":"#46e0a0","missing":"#bb8bff"}.get(cat, "#ff6b35")
+
+    sighting_url = f"https://confluence-life-find.vercel.app/sighting?case={case_id}"
+    from urllib.parse import quote_plus
+    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={quote_plus(sighting_url)}"
+
+    def row(label: str, val: str) -> str:
+        return f'<div class="row"><span class="lbl">{label}</span><span class="val">{val}</span></div>' if val else ""
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MISSING — {name}</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:Arial,sans-serif;background:#f0f0f0;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}}
+.card{{background:#fff;max-width:440px;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.18)}}
+.banner{{background:{accent};color:#fff;text-align:center;padding:20px;font-size:2.2rem;font-weight:900;letter-spacing:10px}}
+.body{{padding:24px}}
+.name{{font-size:2rem;font-weight:800;text-align:center;margin-bottom:4px}}
+.age{{text-align:center;color:#555;margin-bottom:18px;font-size:1rem}}
+.row{{display:flex;gap:10px;margin:8px 0;font-size:.95rem}}
+.lbl{{font-weight:700;color:#333;min-width:100px}}
+.val{{color:#111;flex:1}}
+hr{{border:none;border-top:1px solid #eee;margin:18px 0}}
+.qr-block{{text-align:center}}
+.qr-title{{font-weight:700;color:{accent};font-size:1.05rem;margin-bottom:10px}}
+.qr-sub{{color:#666;font-size:.82rem;margin-top:8px}}
+.contact-box{{background:#f7f7f7;border-radius:8px;padding:14px;margin-top:18px;text-align:center;font-size:.9rem}}
+.contact-box b{{display:block;margin-top:4px;font-size:1rem}}
+@media print{{body{{background:#fff;padding:0}}.card{{box-shadow:none}}}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="banner">MISSING</div>
+  <div class="body">
+    <div class="name">{name}</div>
+    {f'<div class="age">Age: {age}</div>' if age else ""}
+    {row("Last seen", location)}
+    {row("When", last_time)}
+    {row("Clothing", clothing)}
+    {row("Features", features)}
+    <hr>
+    <div class="qr-block">
+      <div class="qr-title">👁 Seen something? Report it now</div>
+      <img src="{qr_url}" width="220" height="220" alt="Scan to report sighting">
+      <div class="qr-sub">Scan this QR code with your phone to report a sighting instantly.<br>Your report goes directly to the search team.</div>
+    </div>
+    <div class="contact-box">
+      If you have information, contact authorities immediately.<br>
+      <b>{contact}</b>
+    </div>
+  </div>
+</div>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
+
+
+@app.get("/sighting")
+async def sighting_page():
+    """Public sighting submission page (linked from the MISSING poster QR code)."""
+    return FileResponse(STATIC / "sighting.html")
 
 
 @app.get("/api/health")

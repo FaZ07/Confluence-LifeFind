@@ -1414,6 +1414,22 @@
             </div>
             <p class="oa-note">The operational link lets police or a search team watch the full leads as they arrive. The family view is a calmer, read-only status page — no raw-lead firehose. The CSV and printable report give a ranked, sourced summary to act on.</p>
           </div>
+          <div class="panel handoff-panel" id="crowdPanel" style="display:none;grid-column:1/-1">
+            <div class="p-h"><span class="t">👁 Crowd sightings</span><span class="c" id="sightingCount">0 submitted</span></div>
+            <div style="display:flex;gap:20px;align-items:flex-start;padding:4px 14px 16px;flex-wrap:wrap">
+              <div style="flex-shrink:0;text-align:center">
+                <img id="posterQr" src="" width="150" height="150" alt="QR code" style="border-radius:8px;border:2px solid var(--border);display:block">
+                <div style="font-size:.72rem;color:var(--muted);margin-top:5px;max-width:150px">Scan to report a sighting</div>
+              </div>
+              <div style="flex:1;min-width:200px">
+                <div style="font-size:.85rem;color:var(--ink);margin-bottom:12px;line-height:1.55">Share this QR code — anyone who sees it can report a sighting directly into the live case. Sightings appear on the map instantly.</div>
+                <div class="ops-actions" style="margin:0">
+                  <button class="oa-btn" onclick="openPoster()">🪧 Open MISSING poster (printable + QR)</button>
+                  <button class="oa-btn" onclick="copySightingLink()">🔗 Copy sighting link</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -2554,6 +2570,29 @@ function shareFamily(){ if(!caseId) return; const url=`${location.origin}/family
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(flash,()=>prompt("Copy this link:",url));
   else prompt("Copy this link:",url);
 }
+function openPoster(){ if(!caseId) return; window.open(`${location.origin}/case/${caseId}/poster`,"_blank"); }
+function copySightingLink(){
+  if(!caseId) return;
+  const url=`${location.origin}/sighting?case=${caseId}`;
+  const flash=()=>{ const b=event&&event.target; if(b){ const o=b.textContent; b.textContent="✓ Copied!"; setTimeout(()=>b.textContent=o,1600); } };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(flash,()=>prompt("Copy sighting link:",url));
+  else prompt("Copy sighting link:",url);
+}
+function updateCrowdPanel(c){
+  if(!caseId) return;
+  const panel=$("crowdPanel");
+  if(!panel) return;
+  panel.style.display="";
+  const n=(c.sightings||[]).length;
+  const sc=$("sightingCount");
+  if(sc) sc.textContent=n===0?"0 submitted":n===1?"1 sighting":""+n+" sightings";
+  const qr=$("posterQr");
+  if(qr && !qr.dataset.loaded){
+    const url=encodeURIComponent(`${location.origin}/sighting?case=${caseId}`);
+    qr.src=`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${url}`;
+    qr.dataset.loaded="1";
+  }
+}
 async function loadAuthorities(){ if(_authLoaded||!caseId) return; _authLoaded=true;
   try{ const loc=((window._lastCase||{}).child||{}).last_seen_location||"";
     const aurl=SV?`/api/authorities?location=${encodeURIComponent(loc)}`:`/api/case/${caseId}/authorities`;
@@ -2605,6 +2644,7 @@ async function refresh(){
   const zones=buildZones(c.leads); renderZones(zones);
   renderOverview(c,zones);
   renderTriage(c,zones);
+  updateCrowdPanel(c);
   if(!c.intelligence||!(c.intelligence.timeline||[]).length) renderTimeline(c.leads,zones);
 
   // judge moment: priority verdict + map ring once we have signal
