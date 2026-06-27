@@ -12,6 +12,7 @@ That is the whole pitch: a judge can ask "why is this lead 87?" and you read it 
 """
 from __future__ import annotations
 
+import math as _math
 import re
 from datetime import UTC, datetime
 from urllib.parse import urlparse
@@ -133,8 +134,6 @@ def _jaccard(a: set[str], b: set[str]) -> float:
 #   corroboration         5       always (0 prior sightings → base score 30)
 #   keyword_match         5       always (name/location keywords in description)
 
-import math as _math
-
 _BASE_W: dict[str, float] = {
     "description_match":  0.30,
     "location_match":     0.20,
@@ -177,19 +176,25 @@ def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 def _distance_score(dist_km: float) -> float:
-    if dist_km < 0.5:   return 100.0
-    if dist_km < 1.0:   return 90.0
-    if dist_km < 3.0:   return 80.0
-    if dist_km < 5.0:   return 70.0
-    if dist_km < 10.0:  return 55.0
-    if dist_km < 20.0:  return 40.0
-    if dist_km < 50.0:  return 20.0
+    if dist_km < 0.5:
+        return 100.0
+    if dist_km < 1.0:
+        return 90.0
+    if dist_km < 3.0:
+        return 80.0
+    if dist_km < 5.0:
+        return 70.0
+    if dist_km < 10.0:
+        return 55.0
+    if dist_km < 20.0:
+        return 40.0
+    if dist_km < 50.0:
+        return 20.0
     return 5.0
 
 
 def _time_consistency_score(sighting: dict, child: dict) -> float | None:
     """0–100 feasibility score, or None when timestamps are absent/unparseable."""
-    from datetime import datetime as _dt
     seen_at   = (sighting.get("seen_at")    or "").strip()
     last_seen = (child.get("last_seen_time") or "").strip()
     if not seen_at or not last_seen:
@@ -198,13 +203,13 @@ def _time_consistency_score(sighting: dict, child: dict) -> float | None:
     t_sight = t_last = None
     for f in fmts:
         try:
-            t_sight = _dt.strptime(seen_at.strip(), f)
+            t_sight = datetime.strptime(seen_at.strip(), f)
             break
         except ValueError:
             pass
     for f in fmts:
         try:
-            t_last = _dt.strptime(last_seen.strip(), f)
+            t_last = datetime.strptime(last_seen.strip(), f)
             break
         except ValueError:
             pass
@@ -218,16 +223,23 @@ def _time_consistency_score(sighting: dict, child: dict) -> float | None:
         dist = _haversine(float(sighting["lat"]), float(sighting["lng"]),
                           float(child["lat"]),    float(child["lng"]))
         spd = dist / max(hrs, 0.05)
-        if spd > 120.0: return 5.0    # faster than any road vehicle
-        if spd > 60.0:  return 50.0   # highway speed — marginal
-        if spd > 20.0:  return 75.0   # vehicle / fast travel
-        return 95.0                    # walking pace — very plausible
+        if spd > 120.0:
+            return 5.0
+        if spd > 60.0:
+            return 50.0
+        if spd > 20.0:
+            return 75.0
+        return 95.0
     except (KeyError, TypeError, ValueError):
         pass
-    if hrs <= 6:    return 95.0
-    if hrs <= 24:   return 80.0
-    if hrs <= 72:   return 60.0
-    if hrs <= 168:  return 40.0
+    if hrs <= 6:
+        return 95.0
+    if hrs <= 24:
+        return 80.0
+    if hrs <= 72:
+        return 60.0
+    if hrs <= 168:
+        return 40.0
     return 20.0
 
 
